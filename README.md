@@ -1,2 +1,2 @@
 # efms
-Electronic Financial Management System
+Enterprise Financial and Logistics Management System
