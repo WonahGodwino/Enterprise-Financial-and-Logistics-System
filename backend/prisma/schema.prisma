@@ -1,0 +1,1685 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE BUSINESS MODELS
+// ============================================
+
+model Subsidiary {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  code          String    @unique
+  description   String?
+  country       String    @default("Nigeria")
+  state         String?
+  city          String?
+  postalCode    String?
+  address       String?
+  phone         String?
+  email         String?
+  website       String?
+  sameAsMainLocation Boolean @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  vehicles      Vehicle[]
+  users         User[]
+  expenses      Expense[]
+  customers     Customer[]
+  incomeRecords IncomeRecord[]
+  invoices      Invoice[]
+  transactions  FinanceTransaction[]
+  budgets       Budget[]
+  staffPositions StaffPositionSubsidiary[]
+  customerLinks CustomerSubsidiary[]
+  vehicleAssignments VehicleAssignment[]
+  vehicleLinks   VehicleSubsidiary[]
+  
+  @@index([code])
+  @@index([isActive])
+}
+
+model Vehicle {
+  id                String    @id @default(cuid())
+  subsidiaryId      String
+  registrationNumber String   @unique
+  model             String
+  assetType         AssetType
+  initialOdometer   Int?
+  status            VehicleStatus @default(ACTIVE)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  subsidiary        Subsidiary @relation(fields: [subsidiaryId], references: [id])
+  dailyOperations   DailyOperation[]
+  expenses          Expense[]
+  incomeRecords     IncomeRecord[]
+  assignment        VehicleAssignment?
+  statusRequests    VehicleStatusRequest[]
+  logs              VehicleLog[]
+  vehicleSubsidiaries VehicleSubsidiary[]
+  
+  @@index([subsidiaryId])
+  @@index([status])
+}
+
+model VehicleStatusRequest {
+  id                    String                     @id @default(cuid())
+  vehicleId             String
+  requesterId           String
+  initialStatus         VehicleStatus
+  targetStatus          VehicleStatus
+  reason                String
+  status                VehicleStatusRequestStatus @default(PENDING_CHIEF_REVIEW)
+  chiefDecisionById     String?
+  chiefDecisionReason   String?
+  chiefDecisionAt       DateTime?
+  finalDecisionById     String?
+  finalDecisionReason   String?
+  finalDecisionAt       DateTime?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+
+  vehicle               Vehicle                    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  requester             User                       @relation("VehicleStatusRequestBy", fields: [requesterId], references: [id], onDelete: Restrict)
+  chiefDecisionBy       User?                      @relation("VehicleStatusRequestChiefDecisionBy", fields: [chiefDecisionById], references: [id], onDelete: SetNull)
+  finalDecisionBy       User?                      @relation("VehicleStatusRequestFinalDecisionBy", fields: [finalDecisionById], references: [id], onDelete: SetNull)
+
+  @@index([vehicleId])
+  @@index([requesterId])
+  @@index([status])
+  @@index([chiefDecisionById])
+  @@index([finalDecisionById])
+}
+
+model VehicleAssignment {
+  id            String    @id @default(cuid())
+  vehicleId     String    @unique
+  staffId       String
+  assignedById  String
+  subsidiaryId  String
+  assignedAt    DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  staff         User      @relation("VehicleAssignmentStaff", fields: [staffId], references: [id], onDelete: Restrict)
+  assignedBy    User      @relation("VehicleAssignmentBy", fields: [assignedById], references: [id], onDelete: Restrict)
+  subsidiary    Subsidiary @relation(fields: [subsidiaryId], references: [id], onDelete: Restrict)
+
+  @@index([staffId])
+  @@index([assignedById])
+  @@index([subsidiaryId])
+}
+
+model VehicleSubsidiary {
+  id            String     @id @default(cuid())
+  vehicleId     String
+  subsidiaryId  String
+  createdAt     DateTime   @default(now())
+
+  vehicle       Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  subsidiary    Subsidiary @relation(fields: [subsidiaryId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, subsidiaryId])
+  @@index([vehicleId])
+  @@index([subsidiaryId])
+}
+
+model VehicleLog {
+  id                 String    @id @default(cuid())
+  vehicleId          String
+  driverId           String
+  startPoint         String
+  destination        String
+  departureAt        DateTime
+  arrivalAt          DateTime
+  initialOdometer    Int
+  destinationOdometer Int
+  distanceCoveredKm  Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  vehicle            Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver             User      @relation("VehicleLogDriver", fields: [driverId], references: [id], onDelete: Restrict)
+
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([departureAt])
+  @@index([arrivalAt])
+}
+
+model DailyOperation {
+  id              String    @id @default(cuid())
+  vehicleId       String
+  operationDate   DateTime  @db.Date
+  openOdometer    Int
+  closeOdometer   Int
+  distanceCovered Int       @default(0)
+  income          Float     @default(0)
+  clientName      String?
+  jobDescription  String?
+  createdById     String
+  
+  vehicle         Vehicle   @relation(fields: [vehicleId], references: [id])
+  createdBy       User      @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  @@unique([vehicleId, operationDate])
+  @@index([operationDate])
+  @@index([vehicleId])
+}
+
+// ============================================
+// COMPLETE EXPENSE MODEL
+// ============================================
+
+model Expense {
+  id                String    @id @default(cuid())
+  
+  // Basic expense information
+  expenseType       ExpenseType
+  expenseCategory   ExpenseCategory
+  expenseSubCategory String?
+  amount            Float
+  quantity          Float?
+  unitPrice         Float?
+  currency          String    @default("NGN")
+  exchangeRate      Float?    @default(1)
+  
+  // Description and details
+  description       String?
+  details           String?
+  reference         String?
+  
+  // Dates
+  expenseDate       DateTime  @db.Date
+  recordedDate      DateTime  @default(now())
+  dueDate           DateTime? @db.Date
+  
+  // Relationships
+  vehicleId         String?
+  vehicle           Vehicle?  @relation(fields: [vehicleId], references: [id])
+  
+  subsidiaryId      String
+  subsidiary        Subsidiary @relation(fields: [subsidiaryId], references: [id])
+  
+  createdById       String
+  createdBy         User      @relation(fields: [createdById], references: [id])
+  
+  approvedById      String?
+  approvedBy        User?     @relation("ApprovedBy", fields: [approvedById], references: [id])
+  completedById     String?
+  completedBy       User?     @relation("CompletedBy", fields: [completedById], references: [id])
+  
+  // Vendor information
+  vendorId          String?
+  vendorName        String?
+  vendorContact     String?
+  
+  // Project/Job tracking
+  projectId         String?
+  projectName       String?
+  jobId             String?
+  jobName           String?
+  
+  // Approval workflow
+  approvalLevel     Int       @default(0)
+  approvalStatus    ApprovalStatus @default(PENDING)
+  processStatus     ExpenseProcessStatus @default(PENDING)
+  approvalHistory   Json?
+  approvedAt        DateTime?
+  completedAt       DateTime?
+  rejectionReason   String?
+  
+  // Budget tracking
+  budgetId          String?
+  budgetCode        String?
+  budgetPeriod      String?
+  
+  // Payment tracking
+  paymentStatus     PaymentStatus @default(UNPAID)
+  paymentMethod     PaymentMethod?
+  paymentDate       DateTime?
+  paymentReference  String?
+  bankAccount       String?
+  chequeNumber      String?
+  
+  // Tax information
+  taxDeductible     Boolean   @default(false)
+  taxCode           String?
+  taxRate           Float?    @default(0)
+  taxAmount         Float?    @default(0)
+  taxRegion         String?
+  
+  // Recurring expenses
+  isRecurring       Boolean   @default(false)
+  recurrencePattern RecurrencePattern?
+  recurrenceInterval Int?
+  recurrenceCount   Int?
+  recurrenceEndDate DateTime?
+  parentExpenseId   String?
+  nextDueDate       DateTime?
+  
+  // Attachments
+  receiptUrl        String?
+  receiptNumber     String?
+  attachments       Json?
+  supportingDocs    Json?
+  
+  // Location tracking
+  location          String?
+  branch            String?
+  department        String?
+  costCenter        String?
+  
+  // Custom fields
+  customFields      Json?
+  
+  // Notes
+  notes             String?
+  internalNotes     String?
+  
+  // Audit fields
+  createdAt         DateTime  @default(now())
+  createdByIp       String?
+  updatedAt         DateTime  @updatedAt
+  updatedById       String?
+  updatedBy         User?     @relation("ExpenseUpdatedBy", fields: [updatedById], references: [id])
+
+  vendor            Vendor?   @relation(fields: [vendorId], references: [id])
+
+  budget            Budget?   @relation(fields: [budgetId], references: [id])
+
+  payments          Payment[]
+  transactions      FinanceTransaction[]
+  
+  // Soft delete
+  isDeleted         Boolean   @default(false)
+  deletedAt         DateTime?
+  deletedById       String?
+  
+  // Indexes for performance
+  @@index([expenseDate])
+  @@index([expenseType])
+  @@index([expenseCategory])
+  @@index([paymentStatus])
+  @@index([approvalStatus])
+  @@index([processStatus])
+  @@index([vehicleId])
+  @@index([subsidiaryId])
+  @@index([vendorId])
+  @@index([projectId])
+  @@index([budgetId])
+  @@index([isRecurring])
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([subsidiaryId, expenseDate])
+  @@index([vehicleId, expenseDate])
+  @@index([vendorId, expenseDate])
+}
+
+// ============================================
+// VENDOR/SUPPLIER MODEL
+// ============================================
+
+model Vendor {
+  id                String    @id @default(cuid())
+  name              String
+  vendorType        VendorType
+  contactPerson     String?
+  email             String?   @unique
+  phone             String?
+  alternativePhone  String?
+  address           String?
+  city              String?
+  state             String?
+  country           String    @default("Nigeria")
+  
+  taxId             String?
+  registrationNumber String?
+  website           String?
+  
+  bankName          String?
+  accountNumber     String?
+  accountName       String?
+  sortCode          String?
+  swiftCode         String?
+  
+  paymentTerms      String?
+  creditLimit       Float?    @default(0)
+  outstandingBalance Float    @default(0)
+  
+  status            VendorStatus @default(ACTIVE)
+  rating            Int?      @default(0)
+  notes             String?
+  
+  expenses          Expense[]
+  
+  createdById       String
+  createdBy         User      @relation("VendorCreatedBy", fields: [createdById], references: [id])
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([name])
+  @@index([email])
+  @@index([vendorType])
+  @@index([status])
+}
+
+// ============================================
+// BUDGET MODEL
+// ============================================
+
+model Budget {
+  id                String    @id @default(cuid())
+  name              String
+  code              String    @unique
+  description       String?
+  
+  fiscalYear        Int
+  period            BudgetPeriod
+  startDate         DateTime  @db.Date
+  endDate           DateTime  @db.Date
+  
+  allocatedAmount   Float
+  spentAmount       Float     @default(0)
+  remainingAmount   Float     @default(0)
+  committedAmount   Float     @default(0)
+  
+  subsidiaryId      String?
+  subsidiary        Subsidiary? @relation(fields: [subsidiaryId], references: [id])
+  
+  department        String?
+  costCenter        String?
+  projectId         String?
+  
+  expenseCategory   ExpenseCategory?
+  expenseType       ExpenseType?
+  
+  status            BudgetStatus @default(ACTIVE)
+  rollover          Boolean   @default(false)
+  
+  approvedById      String?
+  approvedBy        User?     @relation("BudgetApprovedBy", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  
+  expenses          Expense[]
+  alerts            BudgetAlert[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([code, fiscalYear])
+  @@index([fiscalYear])
+  @@index([subsidiaryId])
+  @@index([status])
+}
+
+model BudgetAlert {
+  id                String    @id @default(cuid())
+  budgetId          String
+  budget            Budget    @relation(fields: [budgetId], references: [id])
+  
+  threshold         Float
+  currentAmount     Float
+  thresholdAmount   Float
+  triggeredAt       DateTime  @default(now())
+  acknowledgedAt    DateTime?
+  acknowledgedById  String?
+  
+  message           String
+  severity          AlertSeverity @default(WARNING)
+  status            AlertStatus @default(ACTIVE)
+  
+  @@index([budgetId])
+  @@index([triggeredAt])
+}
+
+// ============================================
+// COMPLETE USER & EMPLOYEE MODEL
+// ============================================
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  fullName        String
+  role            UserRole
+  subsidiaryAccess String[]
+  subsidiaryId    String
+  subsidiary      Subsidiary @relation(fields: [subsidiaryId], references: [id])
+  isActive        Boolean   @default(true)
+  lastLogin       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Employee specific fields
+  employeeId      String?   @unique
+  department      String?
+  position        String?
+  positionId      String?
+  positionRecord  StaffPosition? @relation("UserStaffPosition", fields: [positionId], references: [id])
+  employmentDate  DateTime?
+  phoneNumber     String?
+  emergencyContact Json?
+  address         String?
+  profileImage    String?
+  
+  // Job Description
+  jobDescription  JobDescription?
+  
+  // Weekly Reports
+  weeklyReports   WeeklyReport[]
+  
+  // Performance Metrics
+  performanceReviews PerformanceReview[]
+  performanceScore  Float?    @default(0)
+  performanceRating String?
+  
+  // Manager/Supervisor relationship
+  managerId       String?
+  manager         User?      @relation("UserManager", fields: [managerId], references: [id])
+  subordinates    User[]     @relation("UserManager")
+  
+  // KPI definitions
+  kpiDefinitions  Json?
+  
+  // Relationships
+  createdOperations DailyOperation[] @relation("CreatedBy")
+  approvedExpenses  Expense[] @relation("ApprovedBy")
+  completedExpenses Expense[] @relation("CompletedBy")
+  createdExpenses   Expense[]
+  updatedExpenses   Expense[] @relation("ExpenseUpdatedBy")
+  createdCustomers  Customer[] @relation("CustomerCreatedBy")
+  updatedCustomers  Customer[] @relation("CustomerUpdatedBy")
+  createdIncome     IncomeRecord[] @relation("IncomeCreatedBy")
+  createdInvoices   Invoice[] @relation("InvoiceCreatedBy")
+  receivedPayments  Payment[] @relation("PaymentReceivedBy")
+  auditLogs        AuditLog[]
+  createdVendors   Vendor[] @relation("VendorCreatedBy")
+  approvedBudgets  Budget[] @relation("BudgetApprovedBy")
+  createdStaffPositions StaffPosition[] @relation("StaffPositionCreatedBy")
+  updatedStaffPositions StaffPosition[] @relation("StaffPositionUpdatedBy")
+  createdJobDescriptions JobDescription[] @relation("JobDescriptionCreatedBy")
+  reviewedReports  WeeklyReport[] @relation("WeeklyReportReviewed")
+  managedPerformanceReviews PerformanceReview[] @relation("PerformanceReviewManager")
+  createdKpis      KpiDefinition[] @relation("KpiCreatedBy")
+  createdInvoiceRevisions InvoiceRevision[] @relation("InvoiceRevisionCreatedBy")
+  approvedInvoiceRevisions InvoiceRevision[] @relation("InvoiceRevisionApprovedBy")
+  financeTransactions FinanceTransaction[] @relation("FinanceTransactionRecordedBy")
+  assignedVehicles VehicleAssignment[] @relation("VehicleAssignmentStaff")
+  vehicleAssignmentsMade VehicleAssignment[] @relation("VehicleAssignmentBy")
+  vehicleLogs      VehicleLog[] @relation("VehicleLogDriver")
+  requestedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestBy")
+  chiefReviewedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestChiefDecisionBy")
+  finalReviewedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestFinalDecisionBy")
+  
+  @@index([employeeId])
+  @@index([managerId])
+  @@index([department])
+  @@index([role])
+  @@index([email])
+  @@index([subsidiaryId])
+  @@index([positionId])
+}
+
+model StaffPosition {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  jobDescription  String?   @db.Text
+  archived        Int       @default(0)
+  createdAt       DateTime  @default(now())
+  createdById     String?
+  updatedAt       DateTime  @updatedAt
+  updatedById     String?
+
+  createdBy       User?     @relation("StaffPositionCreatedBy", fields: [createdById], references: [id])
+  updatedBy       User?     @relation("StaffPositionUpdatedBy", fields: [updatedById], references: [id])
+  users           User[]    @relation("UserStaffPosition")
+  subsidiaries    StaffPositionSubsidiary[]
+
+  @@index([archived])
+  @@index([createdById])
+  @@index([updatedById])
+}
+
+model StaffPositionSubsidiary {
+  id            String       @id @default(cuid())
+  positionId    String
+  subsidiaryId  String
+  createdAt     DateTime     @default(now())
+
+  position      StaffPosition @relation(fields: [positionId], references: [id])
+  subsidiary    Subsidiary    @relation(fields: [subsidiaryId], references: [id])
+
+  @@unique([positionId, subsidiaryId])
+  @@index([positionId])
+  @@index([subsidiaryId])
+}
+
+model JobDescription {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  
+  title           String
+  department      String
+  reportsTo       String?
+  
+  jobSummary      String    @db.Text
+  responsibilities Json
+  qualifications  Json
+  skills          Json
+  experience      Json
+  
+  kpis            Json      // Array of KPIs with targets and weights
+  
+  goals           Json
+  objectives      Json
+  performanceStandards Json
+  
+  version         Int       @default(1)
+  effectiveDate   DateTime
+  reviewDate      DateTime?
+  createdById     String
+  createdBy       User      @relation("JobDescriptionCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([department])
+}
+
+model WeeklyReport {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  
+  weekStartDate   DateTime  @db.Date
+  weekEndDate     DateTime  @db.Date
+  weekNumber      Int
+  year            Int
+  
+  originalFile    String
+  fileType        String
+  fileSize        Int
+  processedFile   String?
+  
+  extractedData   Json?
+  kpiAnalysis     Json?
+  
+  performanceScore Float?    @default(0)
+  performanceRating String?
+  colorCode       String?
+  
+  managerComments String?    @db.Text
+  managerId       String?
+  manager         User?      @relation("WeeklyReportReviewed", fields: [managerId], references: [id])
+  reviewedAt      DateTime?
+  
+  status          ReportStatus @default(SUBMITTED)
+  submissionDate  DateTime  @default(now())
+  
+  aiAnalysis      Json?
+  correlationScore Float?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([userId, weekStartDate, weekEndDate])
+  @@index([userId, weekNumber, year])
+  @@index([status])
+  @@index([performanceRating])
+  @@index([colorCode])
+}
+
+model PerformanceReview {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  
+  reviewType      ReviewType
+  periodStart     DateTime  @db.Date
+  periodEnd       DateTime  @db.Date
+  
+  averageScore    Float
+  overallRating   String
+  colorCode       String?
+  
+  kpiAchievements Json
+  taskCompletion  Json
+  strengths       String[]
+  weaknesses      String[]
+  
+  managerComments String?   @db.Text
+  managerRating   Int?
+  managerId       String
+  manager         User      @relation("PerformanceReviewManager", fields: [managerId], references: [id])
+  
+  employeeComments String?  @db.Text
+  acknowledgedAt  DateTime?
+  
+  recommendations Json?
+  nextReviewDate  DateTime?
+  
+  status          ReviewStatus @default(DRAFT)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId, reviewType])
+  @@index([periodStart, periodEnd])
+  @@index([overallRating])
+}
+
+model KpiDefinition {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  category        KpiCategory
+  
+  unit            String
+  targetType      TargetType
+  defaultTarget   Float?
+  minTarget       Float?
+  maxTarget       Float?
+  
+  formula         String?
+  dataSource      String?
+  queryTemplate   String?
+  aggregation     String?
+  
+  isActive        Boolean   @default(true)
+  createdById     String
+  createdBy       User      @relation("KpiCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([category])
+  @@index([isActive])
+}
+
+// ============================================
+// CUSTOMER MANAGEMENT
+// ============================================
+
+model Customer {
+  id                String    @id @default(cuid())
+  customerType      CustomerType @default(INDIVIDUAL)
+  companyName       String?
+  firstName         String?
+  lastName          String?
+  email             String?   @unique
+  phone             String?
+  alternativePhone  String?
+  address           String?
+  city              String?
+  state             String?
+  country           String    @default("Nigeria")
+  taxId             String?
+  registrationNumber String?
+  contactPerson     String?
+  contactPosition   String?
+  notes             String?
+  status            CustomerStatus @default(ACTIVE)
+  creditLimit       Float?    @default(0)
+  paymentTerms      String?
+  subsidiaryId      String
+  subsidiary        Subsidiary @relation(fields: [subsidiaryId], references: [id])
+  customerSubsidiaries CustomerSubsidiary[]
+  
+  createdById       String
+  createdBy         User      @relation("CustomerCreatedBy", fields: [createdById], references: [id])
+  updatedById       String?
+  updatedBy         User?     @relation("CustomerUpdatedBy", fields: [updatedById], references: [id])
+  
+  incomeRecords     IncomeRecord[]
+  invoices          Invoice[]
+  payments          Payment[]
+  transactions      FinanceTransaction[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastTransactionAt DateTime?
+  totalIncome       Float     @default(0)
+  totalPaid         Float     @default(0)
+  outstandingBalance Float    @default(0)
+  
+  @@index([email])
+  @@index([phone])
+  @@index([customerType])
+  @@index([status])
+  @@index([subsidiaryId])
+}
+
+model CustomerSubsidiary {
+  id            String     @id @default(cuid())
+  customerId    String
+  subsidiaryId  String
+  createdAt     DateTime   @default(now())
+
+  customer      Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subsidiary    Subsidiary @relation(fields: [subsidiaryId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, subsidiaryId])
+  @@index([customerId])
+  @@index([subsidiaryId])
+}
+
+// ============================================
+// INCOME & REVENUE TRACKING
+// ============================================
+
+model IncomeRecord {
+  id                String    @id @default(cuid())
+  incomeType        IncomeType
+  category          IncomeCategory
+  
+  amount            Float     @default(0)
+  taxAmount         Float?    @default(0)
+  discountAmount    Float?    @default(0)
+  netAmount         Float     @default(0)
+  currency          String    @default("NGN")
+  exchangeRate      Float?    @default(1)
+  
+  incomeDate        DateTime  @db.Date
+  dueDate           DateTime? @db.Date
+  paidDate          DateTime? @db.Date
+  
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id])
+  
+  vehicleId         String?
+  vehicle           Vehicle?  @relation(fields: [vehicleId], references: [id])
+  
+  subsidiaryId      String
+  subsidiary        Subsidiary @relation(fields: [subsidiaryId], references: [id])
+  
+  invoiceId         String?   @unique
+  invoice           Invoice?  @relation(fields: [invoiceId], references: [id])
+  
+  serviceType       String?
+  serviceDescription String?
+  quantity          Float?
+  unitPrice         Float?
+  paidAmount        Float?    @default(0)
+  incomeItems       Json?
+  
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentMethod     PaymentMethod?
+  paymentReference  String?
+  
+  createdById       String
+  createdBy         User      @relation("IncomeCreatedBy", fields: [createdById], references: [id])
+  
+  notes             String?
+  attachments       Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  payments          Payment[]
+  invoiceRevisions  InvoiceRevision[]
+  transactions      FinanceTransaction[]
+  
+  @@index([incomeDate])
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([subsidiaryId])
+  @@index([paymentStatus])
+  @@index([incomeType])
+}
+
+model Invoice {
+  id                String    @id @default(cuid())
+  invoiceNumber     String    @unique
+  invoiceType       InvoiceType
+  status            InvoiceStatus @default(DRAFT)
+  version           Int       @default(1)
+  
+  issueDate         DateTime  @db.Date
+  dueDate           DateTime  @db.Date
+  paidDate          DateTime? @db.Date
+  
+  subtotal          Float     @default(0)
+  taxAmount         Float     @default(0)
+  taxRate           Float?    @default(0)
+  discountAmount    Float     @default(0)
+  discountType      DiscountType?
+  totalAmount       Float     @default(0)
+  amountPaid        Float     @default(0)
+  balanceDue        Float     @default(0)
+  
+  customerId        String
+  customer          Customer  @relation(fields: [customerId], references: [id])
+  
+  subsidiaryId      String
+  subsidiary        Subsidiary @relation(fields: [subsidiaryId], references: [id])
+
+  parentInvoiceId   String?
+  parentInvoice     Invoice?  @relation("InvoiceVersionLineage", fields: [parentInvoiceId], references: [id])
+  revisions         Invoice[] @relation("InvoiceVersionLineage")
+  
+  incomeRecord      IncomeRecord?
+  
+  items             InvoiceItem[]
+  payments          Payment[]
+  revisionHistory   InvoiceRevision[]
+  transactions      FinanceTransaction[]
+  
+  paymentTerms      String?
+  notes             String?
+  termsAndConditions String?
+  
+  createdById       String
+  createdBy         User      @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([invoiceNumber])
+  @@index([customerId])
+  @@index([status])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@index([parentInvoiceId])
+}
+
+model InvoiceRevision {
+  id                String    @id @default(cuid())
+  invoiceId         String
+  invoice           Invoice   @relation(fields: [invoiceId], references: [id])
+
+  incomeRecordId    String?
+  incomeRecord      IncomeRecord? @relation(fields: [incomeRecordId], references: [id])
+
+  previousVersion   Int
+  nextVersion       Int
+  changeType        InvoiceChangeType @default(REGENERATED_FROM_INCOME)
+  reason            String?
+  requestId         String?
+
+  snapshot          Json
+
+  approvedById      String?
+  approvedBy        User?     @relation("InvoiceRevisionApprovedBy", fields: [approvedById], references: [id])
+  createdById       String
+  createdBy         User      @relation("InvoiceRevisionCreatedBy", fields: [createdById], references: [id])
+
+  createdAt         DateTime  @default(now())
+
+  @@index([invoiceId])
+  @@index([incomeRecordId])
+  @@index([createdAt])
+}
+
+model InvoiceItem {
+  id                String    @id @default(cuid())
+  invoiceId         String
+  invoice           Invoice   @relation(fields: [invoiceId], references: [id])
+  
+  description       String
+  quantity          Float     @default(1)
+  unitPrice         Float
+  discountAmount    Float?    @default(0)
+  taxAmount         Float?    @default(0)
+  totalPrice        Float
+  
+  expenseId         String?
+  operationId       String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@index([invoiceId])
+}
+
+model Payment {
+  id                String    @id @default(cuid())
+  paymentNumber     String    @unique
+  paymentType       PaymentType
+  paymentMethod     PaymentMethod
+  
+  amount            Float
+  currency          String    @default("NGN")
+  exchangeRate      Float?    @default(1)
+  
+  paymentDate       DateTime  @db.Date
+  recordedDate      DateTime  @default(now())
+  
+  customerId        String
+  customer          Customer  @relation(fields: [customerId], references: [id])
+  
+  invoiceId         String?
+  invoice           Invoice?  @relation(fields: [invoiceId], references: [id])
+  
+  incomeRecordId    String?
+  incomeRecord      IncomeRecord? @relation(fields: [incomeRecordId], references: [id])
+  
+  expenseId         String?
+  expense           Expense?  @relation(fields: [expenseId], references: [id])
+  
+  reference         String?
+  bankName          String?
+  accountNumber     String?
+  chequeNumber      String?
+  cardLastFour      String?
+  transactionId     String?
+  
+  receiptNumber     String?   @unique
+  receiptUrl        String?
+  
+  receivedById      String
+  receivedBy        User      @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  transactions      FinanceTransaction[]
+  
+  @@index([paymentDate])
+  @@index([customerId])
+  @@index([paymentMethod])
+  @@index([invoiceId])
+}
+
+model FinanceTransaction {
+  id                String    @id @default(cuid())
+  transactionRef    String    @unique
+  transactionType   FinanceTransactionType
+  direction         TransactionDirection
+  status            FinanceTransactionStatus @default(POSTED)
+
+  amount            Float
+  currency          String    @default("NGN")
+  exchangeRate      Float?    @default(1)
+  transactionDate   DateTime  @default(now())
+
+  sourceType        TransactionSourceType
+  sourceId          String?
+  description       String?
+  metadata          Json?
+
+  incomeRecordId    String?
+  incomeRecord      IncomeRecord? @relation(fields: [incomeRecordId], references: [id])
+
+  expenseId         String?
+  expense           Expense?  @relation(fields: [expenseId], references: [id])
+
+  invoiceId         String?
+  invoice           Invoice?  @relation(fields: [invoiceId], references: [id])
+
+  paymentId         String?
+  payment           Payment?  @relation(fields: [paymentId], references: [id])
+
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id])
+
+  subsidiaryId      String?
+  subsidiary        Subsidiary? @relation(fields: [subsidiaryId], references: [id])
+
+  recordedById      String
+  recordedBy        User      @relation("FinanceTransactionRecordedBy", fields: [recordedById], references: [id])
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([transactionDate])
+  @@index([transactionType])
+  @@index([sourceType, sourceId])
+  @@index([incomeRecordId])
+  @@index([expenseId])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@index([customerId])
+  @@index([subsidiaryId])
+}
+
+// ============================================
+// CONTRIBUTOR/PROFIT SHARING
+// ============================================
+
+model Contributor {
+  id              String    @id @default(cuid())
+  name            String
+  investmentAmount Float
+  investmentDate  DateTime? @db.Date
+  sharePercentage Float
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  distributions   DistributionDetail[]
+}
+
+model ProfitDistribution {
+  id              String    @id @default(cuid())
+  periodStart     DateTime  @db.Date
+  periodEnd       DateTime  @db.Date
+  totalProfit     Float
+  retainedProfit  Float
+  distributableProfit Float
+  status          DistributionStatus @default(CALCULATED)
+  createdAt       DateTime  @default(now())
+  processedAt     DateTime?
+  
+  details         DistributionDetail[]
+  
+  @@unique([periodStart, periodEnd])
+}
+
+model DistributionDetail {
+  id              String    @id @default(cuid())
+  distributionId  String
+  contributorId   String
+  amount          Float
+  paymentStatus   PaymentStatus @default(PENDING)
+  paidDate        DateTime? @db.Date
+  
+  distribution    ProfitDistribution @relation(fields: [distributionId], references: [id])
+  contributor     Contributor @relation(fields: [contributorId], references: [id])
+  
+  @@unique([distributionId, contributorId])
+}
+
+// ============================================
+// AUDIT LOGGING
+// ============================================
+
+model AuditLog {
+  id              String    @id @default(cuid())
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+  action          String
+  entity          String
+  entityId        String?
+  oldValue        Json?
+  newValue        Json?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+  
+  @@index([createdAt])
+  @@index([userId])
+  @@index([entity, entityId])
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+// User related enums
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  CEO
+  MANAGER
+  ACCOUNTANT
+  AUDITOR
+  HR
+  VIEWER
+  EMPLOYEE
+  SUPERVISOR
+  DRIVER
+  CHIEF_DRIVER
+}
+
+// Vehicle related enums
+enum AssetType {
+  SIENNA
+  COROLLA
+  OTHER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+  SOLD
+}
+
+enum VehicleStatusRequestStatus {
+  PENDING_CHIEF_REVIEW
+  PENDING_EXECUTIVE_REVIEW
+  APPROVED
+  REJECTED
+}
+
+// Expense related enums
+enum ExpenseType {
+  OPERATIONAL
+  ADMINISTRATIVE
+  MARKETING
+  CAPITAL
+  SECURITY_SERVICES
+  CONSTRUCTION
+  OTHER
+}
+
+enum ExpenseCategory {
+  // Operational
+  FUEL
+  MAINTENANCE
+  REPAIRS
+  TYRES
+  INSURANCE
+  ROAD_TOLLS
+  PARKING
+  DRIVER_ALLOWANCE
+  VEHICLE_REGISTRATION
+  VEHICLE_INSPECTION
+  OIL_CHANGE
+  BRAKE_PADS
+  BATTERY
+  LIGHTS
+  WIPERS
+  CAR_WASH
+  DETAILING
+  
+  // Administrative
+  SALARIES
+  WAGES
+  BONUSES
+  COMMISSIONS
+  STAFF_BENEFITS
+  PENSION
+  TRAINING
+  RECRUITMENT
+  RENT
+  UTILITIES
+  ELECTRICITY
+  WATER
+  INTERNET
+  TELEPHONE
+  OFFICE_SUPPLIES
+  STATIONERY
+  PRINTING
+  POSTAGE
+  COURIER
+  LEGAL_FEES
+  ACCOUNTING_FEES
+  CONSULTING_FEES
+  AUDIT_FEES
+  BANK_CHARGES
+  INTEREST
+  INSURANCE_ADMIN
+  SECURITY
+  CLEANING
+  WASTE_DISPOSAL
+  
+  // Marketing
+  ADVERTISING
+  DIGITAL_MARKETING
+  SOCIAL_MEDIA_ADS
+  PRINT_ADS
+  BILLBOARDS
+  RADIO_ADS
+  TV_ADS
+  PROMOTIONS
+  DISCOUNTS
+  WEBSITE
+  SEO
+  CONTENT_CREATION
+  BRANDING
+  EVENT_SPONSORSHIP
+  TRADE_SHOWS
+  MARKETING_MATERIALS
+  BROCHURES
+  FLYERS
+  BUSINESS_CARDS
+  
+  // Capital
+  VEHICLE_PURCHASE
+  VEHICLE_IMPORT
+  VEHICLE_CUSTOMS
+  EQUIPMENT
+  MACHINERY
+  TOOLS
+  FURNITURE
+  OFFICE_EQUIPMENT
+  COMPUTER
+  LAPTOP
+  PRINTER
+  SCANNER
+  SOFTWARE
+  LICENSE
+  SUBSCRIPTION
+  RENOVATION
+  CONSTRUCTION
+  BUILDING
+  LAND
+  
+  // Security Services Specific
+  UNIFORMS
+  SECURITY_GEAR
+  GUARD_EQUIPMENT
+  CCTV_CAMERAS
+  CCTV_INSTALLATION
+  CCTV_MAINTENANCE
+  ALARM_SYSTEMS
+  ACCESS_CONTROL
+  SMART_HOME_DEVICES
+  SECURITY_CONSULTING
+  RISK_ASSESSMENT
+  SECURITY_AUDIT
+  GUARD_TRAINING
+  SECURITY_LICENSES
+  SECURITY_PERMITS
+  PATROL_VEHICLES
+  COMMUNICATION_EQUIPMENT
+  RADIOS
+  BODY_CAMERAS
+  
+  // Construction Specific
+  CONSTRUCTION_MATERIALS
+  CEMENT
+  SAND
+  GRAVEL
+  GRANITE
+  BLOCKS
+  BRICKS
+  TIMBER
+  STEEL
+  REINFORCEMENT
+  NAILS
+  SCREWS
+  PAINT
+  TILES
+  ROOFING
+  PLUMBING_MATERIALS
+  ELECTRICAL_MATERIALS
+  WIRES
+  CONDUITS
+  FITTINGS
+  FIXTURES
+  DOORS
+  WINDOWS
+  HARDWARE
+  TOOLS_CONSTRUCTION
+  EQUIPMENT_RENTAL
+  CRANE
+  EXCAVATOR
+  CONCRETE_MIXER
+  GENERATOR
+  SUBCONTRACTORS
+  LABOR
+  SKILLED_LABOR
+  UNSKILLED_LABOR
+  PERMITS
+  BUILDING_PERMITS
+  ENVIRONMENTAL_PERMITS
+  SAFETY_GEAR
+  HELMETS
+  BOOTS
+  VESTS
+  GLOVES
+  SITE_SECURITY
+  SITE_CLEANUP
+  WASTE_REMOVAL
+  
+  // Travel
+  LOCAL_TRAVEL
+  INTERNATIONAL_TRAVEL
+  AIRFARE
+  HOTEL
+  MEALS
+  TRANSPORTATION
+  TAXI
+  RENTAL_CAR
+  FUEL_TRAVEL
+  PARKING_TRAVEL
+  TOLLS_TRAVEL
+  VISA
+  PASSPORT
+  
+  // Miscellaneous
+  DONATIONS
+  CHARITY
+  GIFTS
+  ENTERTAINMENT
+  CLIENT_ENTERTAINMENT
+  STAFF_ENTERTAINMENT
+  TEAM_BUILDING
+  STAFF_PARTY
+  SUBSISTENCE
+  PETTY_CASH
+  CONTINGENCY
+  MISCELLANEOUS
+  
+  OTHER
+}
+
+enum ApprovalStatus {
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+  NEEDS_INFO
+  ESCALATED
+}
+
+enum ExpenseProcessStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+  DISPUTED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  CREDIT_CARD
+  DEBIT_CARD
+  POS
+  USSD
+  MOBILE_MONEY
+  CRYPTO
+  BANK_DRAFT
+  LETTER_OF_CREDIT
+  STANDING_ORDER
+  DIRECT_DEBIT
+  ONLINE_PAYMENT
+  PAYPAL
+  STRIPE
+  FLUTTERWAVE
+  PAYSTACK
+  INTERSWITCH
+  OTHER
+}
+
+enum RecurrencePattern {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  BIMONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+  CUSTOM
+}
+
+// Vendor related enums
+enum VendorType {
+  SUPPLIER
+  SERVICE_PROVIDER
+  CONTRACTOR
+  CONSULTANT
+  FREELANCER
+  GOVERNMENT
+  NON_PROFIT
+  OTHER
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  PREFERRED
+  BLACKLISTED
+  UNDER_REVIEW
+}
+
+// Budget related enums
+enum BudgetPeriod {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  PROJECT_BASED
+}
+
+enum BudgetStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CLOSED
+  CANCELLED
+  UNDER_REVIEW
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+  URGENT
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  IGNORED
+}
+
+// Customer related enums
+enum CustomerType {
+  INDIVIDUAL
+  ORGANIZATION
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+  PROSPECT
+  LEAD
+  CUSTOMER
+  VIP
+}
+
+// Income related enums
+enum IncomeType {
+  SERVICE
+  PRODUCT
+  RENTAL
+  INSTALLATION
+  MAINTENANCE
+  CONSULTING
+  COMMISSION
+  ROYALTY
+  INTEREST
+  DIVIDEND
+  GRANT
+  DONATION
+  OTHER
+}
+
+enum IncomeCategory {
+  CAR_HIRE
+  CAR_SALES
+  CAR_MAINTENANCE
+  CAR_RENTAL_DAILY
+  CAR_RENTAL_WEEKLY
+  CAR_RENTAL_MONTHLY
+  CAR_LEASE
+  CHAUFFEUR_SERVICE
+  AIRPORT_TRANSFER
+  EVENT_TRANSPORT
+  
+  SECURITY_GUARD
+  CCTV_INSTALLATION
+  SMART_HOME
+  SECURITY_CONSULTING
+  ALARM_MONITORING
+  ACCESS_CONTROL
+  FIRE_ALARM
+  SECURITY_AUDIT
+  RISK_ASSESSMENT
+  EXECUTIVE_PROTECTION
+  EVENT_SECURITY
+  MOBILE_PATROL
+  
+  GENERAL_CONTRACT
+  RENOVATION
+  CONSTRUCTION_MATERIALS
+  PROJECT_MANAGEMENT
+  ARCHITECTURAL_DESIGN
+  STRUCTURAL_ENGINEERING
+  BUILDING_CONSTRUCTION
+  ROAD_CONSTRUCTION
+  FOUNDATION_WORK
+  ROOFING
+  ELECTRICAL_INSTALLATION
+  PLUMBING_INSTALLATION
+  TILING
+  PAINTING
+  LANDSCAPING
+  
+  OTHER
+}
+
+enum InvoiceType {
+  STANDARD
+  PROFORMA
+  CREDIT_NOTE
+  DEBIT_NOTE
+  RECEIPT
+  TAX_INVOICE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+  DISPUTED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum InvoiceChangeType {
+  INITIAL_GENERATION
+  REGENERATED_FROM_INCOME
+  APPROVED_MODIFICATION
+  MANUAL_UPDATE
+}
+
+enum PaymentType {
+  INVOICE_PAYMENT
+  DEPOSIT
+  ADVANCE_PAYMENT
+  FINAL_PAYMENT
+  INSTALLMENT
+  REFUND
+  REIMBURSEMENT
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+enum FinanceTransactionType {
+  INCOME
+  EXPENSE
+  INVOICE_ISSUED
+  INVOICE_REVISED
+  PAYMENT_RECEIVED
+  PAYMENT_MADE
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum TransactionDirection {
+  CREDIT
+  DEBIT
+}
+
+enum FinanceTransactionStatus {
+  POSTED
+  PENDING
+  VOID
+  REVERSED
+}
+
+enum TransactionSourceType {
+  INCOME
+  EXPENSE
+  INVOICE
+  PAYMENT
+  MANUAL
+}
+
+enum DistributionStatus {
+  CALCULATED
+  APPROVED
+  PROCESSED
+  CANCELLED
+}
+
+// Employee Performance Enums
+enum ReportStatus {
+  SUBMITTED
+  PROCESSING
+  ANALYZED
+  REVIEWED
+  REJECTED
+  NEEDS_REVISION
+}
+
+enum ReviewType {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum ReviewStatus {
+  DRAFT
+  PENDING_EMPLOYEE
+  PENDING_MANAGER
+  COMPLETED
+  ACKNOWLEDGED
+}
+
+enum KpiCategory {
+  REVENUE
+  OPERATIONAL
+  EFFICIENCY
+  QUALITY
+  ATTENDANCE
+  CUSTOMER_SATISFACTION
+  PROJECT_COMPLETION
+  TASK_COMPLETION
+  OTHER
+}
+
+enum TargetType {
+  FIXED
+  PERCENTAGE
+  RANGE
+  BOOLEAN
+}
+
+enum PerformanceRating {
+  EXCELLENT
+  GOOD
+  AVERAGE
+  POOR
+  CRITICAL
+}
+
+enum ColorCode {
+  GREEN
+  YELLOW
+  ORANGE
+  RED
+}
