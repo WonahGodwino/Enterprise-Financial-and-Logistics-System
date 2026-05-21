@@ -4,8 +4,8 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install build dependencies for native modules (canvas, etc.)
+RUN apk add --no-cache python3 make g++ pkgconfig pixman-dev cairo-dev pango-dev jpeg-dev giflib-dev
 
 # Install dependencies
 COPY package*.json ./
