@@ -1,7 +1,7 @@
 ﻿// backend/src/controllers/admin.controller.js
 import { validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 
@@ -27,7 +27,6 @@ import {
   roleSchema 
 } from '../validators/admin.validators.js';
 
-const prisma = new PrismaClient();
 
 const normalizeString = (value) => {
   if (value === undefined || value === null) return null;

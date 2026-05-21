@@ -142,24 +142,50 @@ class DashboardService {
   }
 
   async getExecutiveDashboard(filters = {}) {
-    return { summary: {}, alerts: [] };
+    // Return counts for users, vehicles, subsidiaries, customers
+    const [userCount, vehicleCount, subsidiaryCount, customerCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.vehicle.count(),
+      prisma.subsidiary.count(),
+      prisma.customer.count()
+    ]);
+    return {
+      summary: {
+        users: userCount,
+        vehicles: vehicleCount,
+        subsidiaries: subsidiaryCount,
+        customers: customerCount
+      },
+      alerts: []
+    };
   }
 
   async getOperationsDashboard(filters = {}) {
-    return { operations: [] };
+    // Return count of daily operations
+    const operationsCount = await prisma.dailyOperation.count();
+    return { operations: operationsCount };
   }
 
   async getFinancialDashboard(period = 'month') {
-    return { revenue: 0, expenses: 0 };
+    // Sum all income and expenses, default to 0 if none
+    const [revenue, expenses] = await Promise.all([
+      prisma.incomeRecord.aggregate({ _sum: { amount: true } }),
+      prisma.expense.aggregate({ _sum: { amount: true } })
+    ]);
+    return {
+      revenue: revenue._sum.amount || 0,
+      expenses: expenses._sum.amount || 0
+    };
   }
-
   async getFleetDashboard(filters = {}) {
     return { fleet: [] };
-  }
+    }
+      // Not implemented
 
   async getDriverDashboard(driverId) {
     return { driverId, metrics: {} };
-  }
+    }
+      // Not implemented
 
   async getMaintenanceDashboard() {
     return { maintenance: [] };

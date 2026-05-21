@@ -68,6 +68,33 @@ html[data-theme='dark'] .income-entry-page input[type='date']::-webkit-calendar-
   opacity: 0.9;
 }
 
+/* Transaction Log dark mode */
+html[data-theme='dark'] .transaction-log-page .text-gray-800,
+html[data-theme='dark'] .transaction-log-page .text-gray-900 {
+  color: #f8fafc !important;
+}
+
+html[data-theme='dark'] .transaction-log-page .text-gray-700 {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme='dark'] .transaction-log-page .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme='dark'] .transaction-log-page .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='dark'] .transaction-log-page .text-gray-400 {
+  color: #64748b !important;
+}
+
+html[data-theme='dark'] .transaction-log-page input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.9;
+}
+
 /* Small helpers */
 .container {
   @apply mx-auto px-4;
@@ -120,4 +147,17 @@ html[data-theme='dark'] .income-entry-page input[type='date']::-webkit-calendar-
 .rich-text-content a {
   color: #dc2626;
   text-decoration: underline;
+}
+
+html[data-theme='dark'] .staff-onboarding-page input,
+html[data-theme='dark'] .staff-onboarding-page select,
+html[data-theme='dark'] .staff-onboarding-page textarea {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .staff-onboarding-page input::placeholder,
+html[data-theme='dark'] .staff-onboarding-page textarea::placeholder {
+  color: #94a3b8;
 }

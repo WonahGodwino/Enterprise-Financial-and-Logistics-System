@@ -368,7 +368,7 @@ const StaffRegistrationForm = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 staff-onboarding-page">
       <div className="flex flex-col gap-4 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-red-600">Administration</p>

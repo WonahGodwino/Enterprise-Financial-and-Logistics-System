@@ -1,8 +1,5 @@
 
 ## 3. Docker Configuration Files
-
-**`backend/Dockerfile`**
-```dockerfile
 FROM node:18-alpine
 
 WORKDIR /app

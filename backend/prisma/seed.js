@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../src/config/database.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 const DEFAULT_STAFF_POSITIONS = [
   'Strategic Growth & Market Development',
