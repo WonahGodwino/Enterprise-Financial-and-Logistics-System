@@ -39,70 +39,6 @@ const CHART_METRICS = {
   incomeByCustomer: 'income-by-customer',
 };
 
-// Keep this false for fully live backend-driven dashboard data.
-const USE_RICH_TEMPORAL_MOCKS = false;
-
-const PERIOD_LABELS = {
-  daily: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8', 'Day 9', 'Day 10', 'Day 11', 'Day 12', 'Day 13', 'Day 14'],
-  monthly: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-  yearly: ['2020', '2021', '2022', '2023', '2024', '2025', '2026'],
-};
-
-const TEMPORAL_MOCKS = {
-  daily: {
-    trend: {
-      labels: PERIOD_LABELS.daily,
-      income: [240000, 285000, 260000, 315000, 330000, 295000, 340000, 355000, 298000, 372000, 366000, 389000, 412000, 405000],
-      expenses: [180000, 190000, 205000, 215000, 225000, 210000, 235000, 242000, 218000, 251000, 247000, 260000, 271000, 266000],
-    },
-    expenseCategory: {
-      labels: ['FUEL', 'MAINTENANCE', 'SALARIES', 'UTILITIES', 'REPAIRS', 'ROAD_TOLLS', 'OFFICE_SUPPLIES', 'SECURITY'],
-      values: [420000, 190000, 360000, 130000, 170000, 95000, 110000, 140000],
-    },
-    incomeByCustomer: {
-      labels: ['Acme Ltd', 'BluePeak', 'Prime Build', 'Zenith Hub', 'Northgate', 'Vista Core', 'Helios Team', 'Maple Works'],
-      values: [510000, 360000, 430000, 305000, 255000, 280000, 240000, 225000],
-    },
-  },
-  monthly: {
-    trend: {
-      labels: PERIOD_LABELS.monthly,
-      income: [4600000, 4950000, 5100000, 5400000, 5650000, 5900000, 6100000, 5980000, 6270000, 6490000, 6710000, 6980000],
-      expenses: [3200000, 3350000, 3500000, 3680000, 3750000, 3890000, 4010000, 3940000, 4120000, 4250000, 4380000, 4510000],
-    },
-    expenseCategory: {
-      labels: ['FUEL', 'SALARIES', 'MAINTENANCE', 'OFFICE_SUPPLIES', 'UTILITIES', 'INSURANCE', 'TRAINING', 'MARKETING'],
-      values: [1650000, 2400000, 1180000, 620000, 740000, 530000, 460000, 710000],
-    },
-    incomeByCustomer: {
-      labels: ['Acme Ltd', 'Prime Build', 'Skyline Co', 'BluePeak', 'Zenith Hub', 'Northgate', 'Delta Matrix', 'Summit Grid'],
-      values: [2750000, 2350000, 2080000, 1820000, 1460000, 1390000, 1280000, 1210000],
-    },
-  },
-  yearly: {
-    trend: {
-      labels: PERIOD_LABELS.yearly,
-      income: [36800000, 41200000, 42000000, 48500000, 56200000, 62400000, 70800000],
-      expenses: [27600000, 29800000, 31800000, 35200000, 40100000, 44200000, 49800000],
-    },
-    expenseCategory: {
-      labels: ['SALARIES', 'FUEL', 'MAINTENANCE', 'MARKETING', 'UTILITIES', 'INSURANCE', 'SOFTWARE', 'REPAIRS'],
-      values: [23500000, 14200000, 9800000, 7600000, 6200000, 5100000, 4300000, 3900000],
-    },
-    incomeByCustomer: {
-      labels: ['Acme Ltd', 'Prime Build', 'Northgate', 'BluePeak', 'Zenith Hub', 'Summit Grid', 'Atlas Core', 'Harbor Link'],
-      values: [24800000, 20600000, 17400000, 15100000, 12800000, 11900000, 11300000, 10600000],
-    },
-  },
-};
-
-const hasDatasetValues = (values = []) => values.some((value) => Number(value || 0) > 0);
-
-const shouldUseFallbackForPayload = (payload, datasetIndex = 0) => {
-  const labels = payload?.labels || [];
-  const values = payload?.datasets?.[datasetIndex]?.data || [];
-  return labels.length === 0 || values.length === 0 || !hasDatasetValues(values);
-};
 
 const formatTrendLabels = (period, labels = []) => {
   const safeLabels = Array.isArray(labels) ? labels : [];
@@ -129,73 +65,6 @@ const formatTrendLabels = (period, labels = []) => {
   return safeLabels;
 };
 
-const buildMockState = (period) => {
-  const mock = TEMPORAL_MOCKS[period] || TEMPORAL_MOCKS.monthly;
-  const totalIncome = mock.trend.income.reduce((sum, value) => sum + value, 0);
-  const totalExpenses = mock.trend.expenses.reduce((sum, value) => sum + value, 0);
-  const netIncome = totalIncome - totalExpenses;
-
-  return {
-    kpi: {
-      totals: {
-        income: totalIncome,
-        expenses: totalExpenses,
-        net: netIncome,
-      },
-      topCustomers: mock.incomeByCustomer.labels.map((label, index) => ({
-        customerName: label,
-        total: mock.incomeByCustomer.values[index] || 0,
-      })),
-      topExpenseCategories: mock.expenseCategory.labels.map((label, index) => ({
-        category: label,
-        total: mock.expenseCategory.values[index] || 0,
-      })),
-    },
-    trendData: {
-      labels: mock.trend.labels,
-      datasets: [
-        {
-          label: 'Income',
-          data: mock.trend.income,
-          borderColor: '#22c55e',
-          backgroundColor: 'rgba(34, 197, 94, 0.15)',
-          tension: 0.35,
-        },
-        {
-          label: 'Expenses',
-          data: mock.trend.expenses,
-          borderColor: '#ef4444',
-          backgroundColor: 'rgba(239, 68, 68, 0.15)',
-          tension: 0.35,
-        },
-      ],
-    },
-    expenseCategoryData: {
-      labels: mock.expenseCategory.labels,
-      datasets: [
-        {
-          label: 'Expense by Category',
-          data: mock.expenseCategory.values,
-          backgroundColor: [
-            '#1d4ed8', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#65a30d', '#b91c1c',
-          ],
-        },
-      ],
-    },
-    incomeByCustomerData: {
-      labels: mock.incomeByCustomer.labels,
-      datasets: [
-        {
-          label: 'Income by Customer',
-          data: mock.incomeByCustomer.values,
-          backgroundColor: '#2563eb',
-          borderColor: '#1e40af',
-          borderWidth: 1,
-        },
-      ],
-    },
-  };
-};
 
 const buildCompanyFinanceSnapshot = (subsidiaryRows = [], incomeRows = [], expenseRows = []) => {
   const subsidiaries = Array.isArray(subsidiaryRows) ? subsidiaryRows : [];
@@ -427,19 +296,6 @@ const Dashboard = () => {
     setLoading(true);
     setError('');
 
-    if (USE_RICH_TEMPORAL_MOCKS) {
-      const mockState = buildMockState(period);
-      setKpi(mockState.kpi);
-      setTrendData(mockState.trendData);
-      setExpenseCategoryData(mockState.expenseCategoryData);
-      setIncomeByCustomerData(mockState.incomeByCustomerData);
-      setCompanyFinanceSnapshot(buildSnapshotFromTotals(mockState.kpi?.totals?.income, mockState.kpi?.totals?.expenses));
-      setCompanyFinanceNote('Showing aggregate view from dashboard totals.');
-      setDrillState(null);
-      setLoading(false);
-      return;
-    }
-
     try {
       const [kpiResponse, trendResponse, categoryResponse, customerResponse] = await Promise.all([
         api.getDashboardKPI({ period }),
@@ -448,72 +304,10 @@ const Dashboard = () => {
         api.getDashboardCharts({ period, metric: CHART_METRICS.incomeByCustomer }),
       ]);
 
-      const mockState = buildMockState(period);
-      const trendPayload = trendResponse?.data || { labels: [], datasets: [] };
-      const categoryPayload = categoryResponse?.data || { labels: [], datasets: [] };
-      const customerPayload = customerResponse?.data || { labels: [], datasets: [] };
-
-      const trendNeedsFallbackAny = shouldUseFallbackForPayload(trendPayload, 0) || shouldUseFallbackForPayload(trendPayload, 1);
-      const categoryNeedsFallback = shouldUseFallbackForPayload(categoryPayload, 0);
-      const customerNeedsFallback = shouldUseFallbackForPayload(customerPayload, 0);
-
-      const hasRealKpiTotals =
-        Number(kpiResponse?.data?.totals?.income || 0) > 0 ||
-        Number(kpiResponse?.data?.totals?.expenses || 0) > 0 ||
-        Number(kpiResponse?.data?.totals?.net || 0) !== 0;
-
-      const nextKpi = hasRealKpiTotals ? kpiResponse.data : mockState.kpi;
-
-      setKpi(nextKpi);
-      setTrendData({
-        labels: trendNeedsFallbackAny
-          ? mockState.trendData.labels
-          : formatTrendLabels(period, trendPayload.labels || []),
-        datasets: [
-          {
-            label: 'Income',
-            data: trendNeedsFallbackAny ? mockState.trendData.datasets[0].data : (trendPayload?.datasets?.[0]?.data || []),
-            borderColor: '#22c55e',
-            backgroundColor: 'rgba(34, 197, 94, 0.15)',
-            tension: 0.35,
-          },
-          {
-            label: 'Expenses',
-            data: trendNeedsFallbackAny ? mockState.trendData.datasets[1].data : (trendPayload?.datasets?.[1]?.data || []),
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.15)',
-            tension: 0.35,
-          },
-        ],
-      });
-
-      setExpenseCategoryData({
-        labels: categoryNeedsFallback ? mockState.expenseCategoryData.labels : (categoryPayload.labels || []),
-        meta: categoryNeedsFallback ? (mockState.expenseCategoryData.meta || {}) : (categoryPayload.meta || {}),
-        datasets: [
-          {
-            label: 'Expense by Category',
-            data: categoryNeedsFallback ? mockState.expenseCategoryData.datasets[0].data : (categoryPayload?.datasets?.[0]?.data || []),
-            backgroundColor: [
-              '#1d4ed8', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#65a30d', '#b91c1c',
-            ],
-          },
-        ],
-      });
-
-      setIncomeByCustomerData({
-        labels: customerNeedsFallback ? mockState.incomeByCustomerData.labels : (customerPayload.labels || []),
-        meta: customerNeedsFallback ? (mockState.incomeByCustomerData.meta || {}) : (customerPayload.meta || {}),
-        datasets: [
-          {
-            label: 'Income by Customer',
-            data: customerNeedsFallback ? mockState.incomeByCustomerData.datasets[0].data : (customerPayload?.datasets?.[0]?.data || []),
-            backgroundColor: '#2563eb',
-            borderColor: '#1e40af',
-            borderWidth: 1,
-          },
-        ],
-      });
+      setKpi(kpiResponse.data);
+      setTrendData(trendResponse?.data || { labels: [], datasets: [] });
+      setExpenseCategoryData(categoryResponse?.data || { labels: [], datasets: [] });
+      setIncomeByCustomerData(customerResponse?.data || { labels: [], datasets: [] });
 
       const [subsidiaryResult, incomeResult, expenseResult] = await Promise.allSettled([
         api.getSubsidiaries(),
@@ -528,7 +322,7 @@ const Dashboard = () => {
       const canBuildDetailedSnapshot = subsidiaryRows.length > 0 && (incomeRows.length > 0 || expenseRows.length > 0);
       const nextSnapshot = canBuildDetailedSnapshot
         ? buildCompanyFinanceSnapshot(subsidiaryRows, incomeRows, expenseRows)
-        : buildSnapshotFromTotals(nextKpi?.totals?.income, nextKpi?.totals?.expenses);
+        : buildSnapshotFromTotals(kpiResponse?.data?.totals?.income, kpiResponse?.data?.totals?.expenses);
 
       setCompanyFinanceSnapshot(nextSnapshot);
       setCompanyFinanceNote(
@@ -537,14 +331,6 @@ const Dashboard = () => {
           : 'Detailed unit-level snapshot is temporarily unavailable. Showing aggregate values only.'
       );
     } catch (loadError) {
-      const mockState = buildMockState(period);
-      setKpi(mockState.kpi);
-      setTrendData(mockState.trendData);
-      setExpenseCategoryData(mockState.expenseCategoryData);
-      setIncomeByCustomerData(mockState.incomeByCustomerData);
-      setCompanyFinanceSnapshot(buildSnapshotFromTotals(mockState.kpi?.totals?.income, mockState.kpi?.totals?.expenses));
-      setCompanyFinanceNote('Live unit-level data could not be loaded. Showing aggregate view from fallback totals.');
-      setDrillState(null);
       setError(loadError?.response?.data?.message || 'Unable to load live dashboard data.');
     } finally {
       setLoading(false);
