@@ -35,3 +35,10 @@ Thumbs.db
 # Coverage
 coverage/
 **/coverage/
+
+# Environment variables (contains secrets)
+backend/.env
+backend/.env.local
+.env
+.env.local
+.env.production
