@@ -1783,8 +1783,8 @@ const Expenses = () => {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4">
+          <div className="w-full max-w-full sm:max-w-lg md:max-w-2xl rounded-xl bg-white shadow-2xl overflow-y-auto max-h-screen">
             <div className="flex items-center justify-between border-b px-6 py-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-800">{editingExpense ? 'Edit Expense' : 'Request Expense'}</h2>
@@ -1806,7 +1806,7 @@ const Expenses = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddExpense} className="space-y-4 px-6 py-5">
+            <form onSubmit={handleAddExpense} className="space-y-4 px-4 sm:px-6 py-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className="text-sm text-gray-700">
                   Expense Type
@@ -2007,7 +2007,7 @@ const Expenses = () => {
                 <p className="mt-1 text-xs text-gray-500">For transparency, attach receipt when available.</p>
               </label>
 
-              <div className="flex justify-end gap-3 border-t pt-4">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 border-t pt-4">
                 <button
                   type="button"
                   onClick={() => {
