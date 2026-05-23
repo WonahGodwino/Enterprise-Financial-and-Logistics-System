@@ -78,12 +78,12 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-200 via-rose-100 to-white">
+    <div className="min-h-screen flex items-center justify-center bg-red-100">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">MAPSI-EFMS</h1>
+          <h1 className="text-3xl font-extrabold text-red-700 drop-shadow-md" style={{textShadow: '1px 1px 2px #fff, 0 0 2px #fff'}}>MAPSI-EFMS</h1>
           <img
-            src={aiPoweredIllustration}
+            src={require('../../assets/ai-powered-login-red.svg').default}
             alt="AI powered system illustration"
             className="w-full max-w-sm mx-auto mt-4 mb-4 rounded-lg shadow-md"
           />
