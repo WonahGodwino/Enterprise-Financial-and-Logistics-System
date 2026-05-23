@@ -107,10 +107,10 @@ export class OperationController {
     }
 
     const currentRole = String(req.user?.role || '').toUpperCase();
-    if (currentRole !== 'CHIEF_DRIVER') {
+    if (!['CHIEF_DRIVER', 'CEO', 'SUPER_ADMIN'].includes(currentRole)) {
       return res.status(403).json({
         success: false,
-        message: 'Only chief drivers can register vehicles',
+        message: 'Only chief drivers, CEO, or super admins can register vehicles',
       });
     }
 
@@ -147,7 +147,7 @@ export class OperationController {
     if (uniqueAllowedSubsidiaryIds.length === 0) {
       return res.status(403).json({
         success: false,
-        message: 'No subsidiary access is assigned to this chief driver',
+        message: 'No subsidiary access is assigned to this user',
       });
     }
 
@@ -155,7 +155,7 @@ export class OperationController {
     if (hasOutOfScopeSubsidiary) {
       return res.status(403).json({
         success: false,
-        message: 'Vehicle can only be registered into subsidiaries assigned to this chief driver',
+        message: 'Vehicle can only be registered into subsidiaries assigned to this user',
       });
     }
 

@@ -761,7 +761,7 @@ router.post('/vehicles/status-requests/:requestId/chief-review', authorize(['CHI
 router.post('/vehicles/status-requests/:requestId/executive-review', authorize(['CEO', 'SUPER_ADMIN']), operationController.executiveReviewStatusRequest);
 router.get('/vehicles/:vehicleId/detail', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'CEO', 'SUPER_ADMIN']), operationController.getVehicleDetail);
 router.get('/vehicles/:vehicleId/logs', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'CEO', 'SUPER_ADMIN']), operationController.getVehicleLogs);
-router.post('/vehicles', authorize(['CHIEF_DRIVER']), operationController.createVehicle);
+router.post('/vehicles', authorize(['CHIEF_DRIVER', 'CEO', 'SUPER_ADMIN']), operationController.createVehicle);
 router.get('/vehicles', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN']), operationController.getVehicles);
 router.get('/operations/analytics', authorize(['ADMIN', 'CEO','SUPER_ADMIN']), operationController.getAnalytics);
 

@@ -25,7 +25,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const VEHICLE_ASSIGNER_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
 const DRIVER_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER']);
-const VEHICLE_REGISTRAR_ROLES = new Set(['CHIEF_DRIVER']);
+const VEHICLE_REGISTRAR_ROLES = new Set(['CHIEF_DRIVER', 'CEO', 'SUPER_ADMIN']);
 const STAFF_ROLE_OPTIONS = [
   { value: 'ALL', label: 'All Driver Roles' },
   { value: 'DRIVER', label: 'Driver' },
