@@ -34,10 +34,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: nginx:alpine
-    volumes:
-      - ../frontend/build:/usr/share/nginx/html:ro
-      - ./frontend-config/default.conf:/etc/nginx/conf.d/default.conf:ro
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
     restart: unless-stopped
 
   nginx:
