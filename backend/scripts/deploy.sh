@@ -62,7 +62,7 @@ update_code() {
     if [ -d "$DEPLOY_DIR" ]; then
         cd "$DEPLOY_DIR"
         git fetch origin
-        git reset --hard origin/main
+        git reset --hard origin/master
     else
         git clone https://github.com/mapsigroup/efms.git "$DEPLOY_DIR"
         cd "$DEPLOY_DIR"

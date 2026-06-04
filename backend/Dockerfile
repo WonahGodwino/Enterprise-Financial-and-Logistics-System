@@ -27,10 +27,13 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
+# Ensure container startup can apply pending migrations before booting the app
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Create uploads directory
 RUN mkdir -p uploads logs
 
 EXPOSE 5000
 
 # Start command
-CMD ["npm", "start"]
+CMD ["/app/docker-entrypoint.sh"]
