@@ -5,6 +5,7 @@ import prisma from '../config/database.js';
 import { AppError } from '../utils/AppError.js';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils.js';
 import { cacheMiddleware } from '../middleware/cache.middleware.js';
+import { COLLAPSED_EXPENSE_CATEGORIES } from '../constants/expenseCategories.js';
 
 const router = express.Router();
 
@@ -726,7 +727,7 @@ router.get('/vehicles/performance', asyncHandler(async (req, res) => {
       expenses: {
         where: {
           expenseDate: where.operationDate,
-          expenseCategory: { in: ['FUEL', 'MAINTENANCE', 'REPAIRS'] }
+          expenseCategory: { in: ['FUEL', 'REPAIRS_AND_MAINTENANCE'] }
         }
       }
     }
@@ -783,7 +784,7 @@ router.get('/vehicles/maintenance', asyncHandler(async (req, res) => {
 
   const maintenanceExpenses = await prisma.expense.findMany({
     where: {
-      expenseCategory: { in: ['MAINTENANCE', 'REPAIRS', 'TYRES', 'OIL_CHANGE', 'BRAKE_PADS', 'BATTERY'] },
+      expenseCategory: { in: ['REPAIRS_AND_MAINTENANCE'] },
       expenseDate: {
         gte: new Date(year, 0, 1),
         lte: new Date(year, 11, 31)
@@ -941,7 +942,7 @@ router.get('/profit/contribution-margin', asyncHandler(async (req, res) => {
       expenseDate: { gte: start, lte: end },
       isDeleted: false,
       expenseCategory: {
-        in: ['FUEL', 'MAINTENANCE', 'REPAIRS', 'DRIVER_ALLOWANCE', 'COMMISSIONS']
+        in: ['FUEL', 'REPAIRS_AND_MAINTENANCE', 'TRANSPORT_AND_TRAVELING', 'VEHICLE_HIRE']
       }
     },
     _sum: { amount: true }
@@ -1549,21 +1550,9 @@ function calculateForecastConfidence(historicalData) {
 function getExpenseCategoryDefinitions() {
   return {
     mainCategories: [
-      { name: 'OPERATIONAL', categories: ['FUEL', 'MAINTENANCE', 'REPAIRS', 'TYRES', 'INSURANCE', 'ROAD_TOLLS', 'PARKING', 'DRIVER_ALLOWANCE'] },
-      { name: 'ADMINISTRATIVE', categories: ['SALARIES', 'RENT', 'UTILITIES', 'OFFICE_SUPPLIES', 'COMMUNICATION', 'INTERNET', 'LEGAL', 'ACCOUNTING'] },
-      { name: 'MARKETING', categories: ['ADVERTISING', 'PROMOTIONS', 'WEBSITE', 'SOCIAL_MEDIA'] },
-      { name: 'CAPITAL', categories: ['VEHICLE_PURCHASE', 'EQUIPMENT', 'FURNITURE', 'COMPUTER', 'SOFTWARE'] },
-      { name: 'SECURITY', categories: ['UNIFORMS', 'EQUIPMENT_MAINTENANCE', 'TRAINING', 'LICENSES', 'CCTV_CAMERAS', 'SECURITY_GEAR'] },
-      { name: 'CONSTRUCTION', categories: ['MATERIALS', 'EQUIPMENT_RENTAL', 'SUBCONTRACTORS', 'PERMITS', 'SAFETY_GEAR'] }
+      { name: 'EXPENSES', categories: COLLAPSED_EXPENSE_CATEGORIES }
     ],
-    allCategories: [
-      'FUEL', 'MAINTENANCE', 'REPAIRS', 'TYRES', 'INSURANCE', 'ROAD_TOLLS', 'PARKING', 'DRIVER_ALLOWANCE',
-      'SALARIES', 'RENT', 'UTILITIES', 'OFFICE_SUPPLIES', 'COMMUNICATION', 'INTERNET', 'LEGAL', 'ACCOUNTING',
-      'ADVERTISING', 'PROMOTIONS', 'WEBSITE', 'SOCIAL_MEDIA',
-      'VEHICLE_PURCHASE', 'EQUIPMENT', 'FURNITURE', 'COMPUTER', 'SOFTWARE',
-      'UNIFORMS', 'EQUIPMENT_MAINTENANCE', 'TRAINING', 'LICENSES', 'CCTV_CAMERAS', 'SECURITY_GEAR',
-      'MATERIALS', 'EQUIPMENT_RENTAL', 'SUBCONTRACTORS', 'PERMITS', 'SAFETY_GEAR'
-    ]
+    allCategories: COLLAPSED_EXPENSE_CATEGORIES,
   };
 }
 
@@ -1571,7 +1560,7 @@ async function getMostCommonIssues(year) {
   const issues = await prisma.expense.groupBy({
     by: ['expenseCategory', 'description'],
     where: {
-      expenseCategory: { in: ['MAINTENANCE', 'REPAIRS'] },
+      expenseCategory: { in: ['REPAIRS_AND_MAINTENANCE'] },
       expenseDate: {
         gte: new Date(year, 0, 1),
         lte: new Date(year, 11, 31)

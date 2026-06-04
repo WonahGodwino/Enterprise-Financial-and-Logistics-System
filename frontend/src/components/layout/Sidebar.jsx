@@ -22,12 +22,13 @@ import {
   Wallet,
   Bell,
   Receipt,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { DASHBOARD_ALLOWED_ROLES } from '../../utils/routeAccess';
 
-const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
+const Sidebar = ({ open: openProp, onClose, variant = 'permanent' }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
@@ -36,6 +37,21 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
   const [companySetupOpen, setCompanySetupOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [administrationOpen, setAdministrationOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [open, setOpen] = useState(Boolean(openProp));
+  // Listen for window resize to update the responsive breakpoint state
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Sync internal open state with parent-driven open prop
+  useEffect(() => {
+    setOpen(Boolean(openProp));
+  }, [openProp]);
 
   const canManageCompanySetup = ['ADMIN', 'SUPER_ADMIN', 'CEO'].includes(user?.role);
 
@@ -62,7 +78,8 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
 
   const handleNavigation = (path) => {
     navigate(path);
-    if (variant === 'temporary' && onClose) onClose();
+    if ((variant === 'temporary' || isMobile) && onClose) onClose();
+    if (isMobile) setOpen(false);
   };
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
@@ -86,7 +103,7 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
       ]
     : [
         { text: 'Expenses', path: '/expenses', icon: Wallet },
-        { text: 'Expense Approvals', path: '/expenses/approvals', icon: BadgeCheck, roles: ['CEO', 'SUPER_ADMIN'] },
+        { text: 'Expense Approvals', path: '/expenses/approvals', icon: BadgeCheck, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN'] },
         { text: 'Income Entry', path: '/income', icon: TrendingUp, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN', 'ACCOUNTANT'] },
         { text: 'My Income Modification Request', path: '/income/my-requests', icon: GitCompareArrows, roles: ['ADMIN', 'MANAGER'] },
         { text: 'Profit', path: '/profit', icon: TrendingUp, roles: ['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN'] },
@@ -123,10 +140,10 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
         key={item.path}
         onClick={() => handleNavigation(item.path)}
         className={`w-full text-left flex items-center gap-3 rounded-md transition-colors ${
-          nested ? 'px-3 py-2 text-sm' : 'px-3 py-2.5 text-sm'
+          nested ? 'px-3 py-2 text-sm' : 'px-3 py-3 md:py-2.5 text-sm'
         } ${active
           ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
-          : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')}`}
+          : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')} ${!nested ? 'min-h-[44px]' : ''}`}
       >
         <Icon className={`h-4 w-4 ${active ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
         <span className="truncate">{item.text}</span>
@@ -135,146 +152,165 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
   };
 
   return (
-    <aside
-      className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r shadow-sm transition-transform duration-200 ${mode === 'dark' ? 'border-slate-700 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800' : 'border-amber-100 bg-gradient-to-b from-amber-50 via-amber-50/95 to-white'} ${
-        open || variant === 'permanent' ? 'translate-x-0' : '-translate-x-full'
-      }`}
-    >
-      <div className="flex h-full flex-col">
-        <div className={`flex items-center border-b bg-gradient-to-r px-4 py-5 ${mode === 'dark' ? 'border-slate-700 from-slate-800 to-slate-700 text-red-300' : 'border-amber-200 from-amber-100 to-amber-50 text-red-700'}`}>
-          <div className="text-lg font-bold tracking-wide">MAPSI GROUP</div>
-          <div className={`ml-2 text-sm font-semibold ${mode === 'dark' ? 'text-red-400' : 'text-red-500'}`}>EFMS</div>
-        </div>
+    <>
+      {/* Overlay for mobile/tablet when sidebar is open or always on mobile */}
+      {(open && (variant === 'temporary' || isMobile)) && (
+        <div
+          className="fixed inset-0 z-30 bg-black bg-opacity-40 lg:hidden"
+          onClick={() => { setOpen(false); if (onClose) onClose(); }}
+          aria-label="Close sidebar backdrop"
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 md:w-72 transform border-r shadow-sm transition-transform duration-200 ${mode === 'dark' ? 'border-slate-700 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800' : 'border-amber-100 bg-gradient-to-b from-amber-50 via-amber-50/95 to-white'} ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        aria-label="Sidebar navigation"
+      >
+        <div className="flex h-full flex-col">
+          <div className={`flex items-center border-b bg-gradient-to-r px-4 py-5 ${mode === 'dark' ? 'border-slate-700 from-slate-800 to-slate-700 text-red-300' : 'border-amber-200 from-amber-100 to-amber-50 text-red-700'}`}>
+            <div className="text-lg font-bold tracking-wide">MAPSI GROUP</div>
+            <div className={`ml-2 text-sm font-semibold ${mode === 'dark' ? 'text-red-400' : 'text-red-500'}`}>EFMS</div>
+            {(isMobile || variant === 'temporary') && onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className={`ml-auto rounded-md p-2 lg:hidden ${mode === 'dark' ? 'text-slate-200 hover:bg-slate-700' : 'text-red-700 hover:bg-red-100'}`}
+                aria-label="Close sidebar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            ) : null}
+          </div>
 
-        <div className={`border-b px-4 py-3 ${mode === 'dark' ? 'border-slate-700 bg-slate-800/80' : 'border-amber-200 bg-amber-50/70'}`}>
-          <div className="flex items-center">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-full border font-semibold ${mode === 'dark' ? 'border-red-500/60 bg-red-500/20 text-red-300' : 'border-red-200 bg-red-100 text-red-700'}`}>
-              {(user?.fullName || 'U').charAt(0)}
-            </div>
-            <div className="ml-3">
-              <div className={`text-sm font-bold ${mode === 'dark' ? 'text-slate-100' : 'text-gray-800'}`}>{user?.fullName || 'User'}</div>
-              <div className={`text-xs font-medium ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>{user?.role || ''}</div>
+          <div className={`border-b px-4 py-3 ${mode === 'dark' ? 'border-slate-700 bg-slate-800/80' : 'border-amber-200 bg-amber-50/70'}`}>
+            <div className="flex items-center">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-full border font-semibold ${mode === 'dark' ? 'border-red-500/60 bg-red-500/20 text-red-300' : 'border-red-200 bg-red-100 text-red-700'}`}>
+                {(user?.fullName || 'U').charAt(0)}
+              </div>
+              <div className="ml-3">
+                <div className={`text-sm font-bold ${mode === 'dark' ? 'text-slate-100' : 'text-gray-800'}`}>{user?.fullName || 'User'}</div>
+                <div className={`text-xs font-medium ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>{user?.role || ''}</div>
+              </div>
             </div>
           </div>
+
+          <nav className="flex-1 overflow-y-auto py-4">
+            <ul className="space-y-1.5 px-2">
+              {menuItems.map((item) => (
+                <li key={item.path}>{renderItem(item)}</li>
+              ))}
+
+              {hasVisibleFinanceItem && (
+                <li>
+                  <button
+                    onClick={() => setFinanceOpen((prev) => !prev)}
+                    className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors ${
+                      financeSectionActive
+                        ? (mode === 'dark' ? 'bg-slate-700 text-red-300' : 'bg-red-50 text-red-700')
+                        : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
+                    }`}
+                  >
+                    <Wallet className={`h-4 w-4 ${financeSectionActive ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
+                    <span className="truncate text-sm font-semibold tracking-wide">Finance</span>
+                    <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${financeOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {financeOpen && (
+                    <div className={`mt-1 ml-4 space-y-1 border-l pl-3 ${mode === 'dark' ? 'border-slate-700' : 'border-amber-200'}`}>
+                      {financeItems.map((item) => renderItem(item, true))}
+                    </div>
+                  )}
+                </li>
+              )}
+
+              {hasVisibleAdministrationItem && (
+                <li>
+                  <button
+                    onClick={() => setAdministrationOpen((prev) => !prev)}
+                    className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors ${
+                      administrationSectionActive
+                        ? (mode === 'dark' ? 'bg-slate-700 text-red-300' : 'bg-red-50 text-red-700')
+                        : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
+                    }`}
+                  >
+                    <ShieldCheck className={`h-4 w-4 ${administrationSectionActive ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
+                    <span className="truncate text-sm font-semibold tracking-wide">Administration</span>
+                    <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${administrationOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {administrationOpen && (
+                    <div className={`mt-1 ml-4 space-y-1 border-l pl-3 ${mode === 'dark' ? 'border-slate-700' : 'border-amber-200'}`}>
+                      {administrationItems.map((item) => renderItem(item, true))}
+                    </div>
+                  )}
+                </li>
+              )}
+
+              {canManageCompanySetup && (
+                <li>
+                  <button
+                    onClick={() => setCompanySetupOpen((prev) => !prev)}
+                    className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
+                      location.pathname.startsWith('/company-setup')
+                        ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
+                        : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
+                    }`}
+                  >
+                    <Building2 className={`h-4 w-4 ${location.pathname.startsWith('/company-setup') ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
+                    <span className="truncate">Company Setup</span>
+                    <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${companySetupOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {companySetupOpen && (
+                    <div className={`mt-1 ml-4 space-y-1 border-l pl-3 ${mode === 'dark' ? 'border-slate-700' : 'border-amber-200'}`}>
+                      <button
+                        onClick={() => handleNavigation('/company-setup/main-company')}
+                        className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                          isActive('/company-setup/main-company')
+                            ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
+                            : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
+                        }`}
+                      >
+                        <Building className={`h-4 w-4 ${isActive('/company-setup/main-company') ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
+                        <span>Main Company</span>
+                      </button>
+                      <button
+                        onClick={() => handleNavigation('/company-setup/subsidiary')}
+                        className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                          isActive('/company-setup/subsidiary')
+                            ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
+                            : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
+                        }`}
+                      >
+                        <Building2 className={`h-4 w-4 ${isActive('/company-setup/subsidiary') ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
+                        <span>Subsidiary</span>
+                      </button>
+                    </div>
+                  )}
+                </li>
+              )}
+            </ul>
+          </nav>
+
+          <div className="px-3 pb-4">
+            <button
+              onClick={() => window.open('mailto:support@mapsigroup.com')}
+              className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm ${mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100'}`}
+            >
+              <LifeBuoy className={`h-4 w-4 ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`} />
+              <span>Help and Support</span>
+            </button>
+            <button
+              onClick={logout}
+              className={`mt-2 w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm ${mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100'}`}
+            >
+              <LogOut className={`h-4 w-4 ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`} />
+              <span>Logout</span>
+            </button>
+            <div className={`mt-3 text-xs ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>Version 2.0.0</div>
+          </div>
         </div>
-
-        <nav className="flex-1 overflow-y-auto py-4">
-          <ul className="space-y-1.5 px-2">
-            {menuItems.map((item) => (
-              <li key={item.path}>{renderItem(item)}</li>
-            ))}
-
-            {hasVisibleFinanceItem && (
-              <li>
-                <button
-                  onClick={() => setFinanceOpen((prev) => !prev)}
-                  className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors ${
-                    financeSectionActive
-                      ? (mode === 'dark' ? 'bg-slate-700 text-red-300' : 'bg-red-50 text-red-700')
-                      : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
-                  }`}
-                >
-                  <Wallet className={`h-4 w-4 ${financeSectionActive ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
-                  <span className="truncate text-sm font-semibold tracking-wide">Finance</span>
-                  <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${financeOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {financeOpen && (
-                  <div className={`mt-1 ml-4 space-y-1 border-l pl-3 ${mode === 'dark' ? 'border-slate-700' : 'border-amber-200'}`}>
-                    {financeItems.map((item) => renderItem(item, true))}
-                  </div>
-                )}
-              </li>
-            )}
-
-            {hasVisibleAdministrationItem && (
-              <li>
-                <button
-                  onClick={() => setAdministrationOpen((prev) => !prev)}
-                  className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors ${
-                    administrationSectionActive
-                      ? (mode === 'dark' ? 'bg-slate-700 text-red-300' : 'bg-red-50 text-red-700')
-                      : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
-                  }`}
-                >
-                  <ShieldCheck className={`h-4 w-4 ${administrationSectionActive ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
-                  <span className="truncate text-sm font-semibold tracking-wide">Administration</span>
-                  <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${administrationOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {administrationOpen && (
-                  <div className={`mt-1 ml-4 space-y-1 border-l pl-3 ${mode === 'dark' ? 'border-slate-700' : 'border-amber-200'}`}>
-                    {administrationItems.map((item) => renderItem(item, true))}
-                  </div>
-                )}
-              </li>
-            )}
-
-            {canManageCompanySetup && (
-              <li>
-                <button
-                  onClick={() => setCompanySetupOpen((prev) => !prev)}
-                  className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
-                    location.pathname.startsWith('/company-setup')
-                      ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
-                      : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
-                  }`}
-                >
-                  <Building2 className={`h-4 w-4 ${location.pathname.startsWith('/company-setup') ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
-                  <span className="truncate">Company Setup</span>
-                  <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${companySetupOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {companySetupOpen && (
-                  <div className={`mt-1 ml-4 space-y-1 border-l pl-3 ${mode === 'dark' ? 'border-slate-700' : 'border-amber-200'}`}>
-                    <button
-                      onClick={() => handleNavigation('/company-setup/main-company')}
-                      className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                        isActive('/company-setup/main-company')
-                          ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
-                          : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
-                      }`}
-                    >
-                      <Building className={`h-4 w-4 ${isActive('/company-setup/main-company') ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
-                      <span>Main Company</span>
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/company-setup/subsidiary')}
-                      className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                        isActive('/company-setup/subsidiary')
-                          ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
-                          : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
-                      }`}
-                    >
-                      <Building2 className={`h-4 w-4 ${isActive('/company-setup/subsidiary') ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
-                      <span>Subsidiary</span>
-                    </button>
-                  </div>
-                )}
-              </li>
-            )}
-          </ul>
-        </nav>
-
-        <div className="px-3 pb-4">
-          <button
-            onClick={() => window.open('mailto:support@mapsigroup.com')}
-            className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm ${mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100'}`}
-          >
-            <LifeBuoy className={`h-4 w-4 ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`} />
-            <span>Help and Support</span>
-          </button>
-          <button
-            onClick={logout}
-            className={`mt-2 w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm ${mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100'}`}
-          >
-            <LogOut className={`h-4 w-4 ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`} />
-            <span>Logout</span>
-          </button>
-          <div className={`mt-3 text-xs ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>Version 2.0.0</div>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 

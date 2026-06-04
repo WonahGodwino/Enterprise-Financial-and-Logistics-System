@@ -4,6 +4,10 @@ import { validateExpense } from '../validators/expense.validator.js';
 import { AppError } from '../utils/AppError.js';
 import { invalidateDashboardDrilldownCache } from '../utils/cacheInvalidation.js';
 import prisma from '../config/database.js';
+import { EXPENSE_CATEGORIES_BY_TYPE } from '../constants/expenseCategories.js';
+
+const EXECUTIVE_STAGE_ROLES = ['CEO', 'SUPER_ADMIN'];
+const EXECUTIVE_PRIMARY_ROLES = new Set(['ADMIN', 'CEO']);
 
 const parseAuditJson = (value) => {
   if (!value) return null;
@@ -22,6 +26,7 @@ const parseApprovalProgress = (expense) => {
   const roles = Array.isArray(workflowInit?.roles) && workflowInit.roles.length > 0
     ? workflowInit.roles
     : ['ADMIN', 'SUPER_ADMIN', 'CEO'];
+  const initiatedByRole = String(workflowInit?.initiatedByRole || '').toUpperCase();
 
   const approvedStages = Number.isInteger(workflowInit?.currentStage)
     ? workflowInit.currentStage
@@ -31,11 +36,24 @@ const parseApprovalProgress = (expense) => {
   const parallelRolesByStage = workflowInit && typeof workflowInit.parallelRolesByStage === 'object'
     ? workflowInit.parallelRolesByStage
     : {};
-  const nextRoles = Array.isArray(parallelRolesByStage[indexKey])
+  const storedNextRoles = Array.isArray(parallelRolesByStage[indexKey])
     ? parallelRolesByStage[indexKey]
     : Array.isArray(parallelRolesByStage[approvedStages])
       ? parallelRolesByStage[approvedStages]
       : [roles[approvedStages]].filter(Boolean);
+
+  const normalizedNextRoles = [...new Set(storedNextRoles.map((role) => String(role || '').toUpperCase()).filter(Boolean))];
+  const nextRoles = (() => {
+    if (EXECUTIVE_PRIMARY_ROLES.has(initiatedByRole) && normalizedNextRoles.includes('CEO')) {
+      return EXECUTIVE_STAGE_ROLES.filter((role) => normalizedNextRoles.includes(role));
+    }
+
+    if (EXECUTIVE_PRIMARY_ROLES.has(initiatedByRole) && normalizedNextRoles.length === 1 && normalizedNextRoles[0] === 'SUPER_ADMIN') {
+      return EXECUTIVE_STAGE_ROLES;
+    }
+
+    return normalizedNextRoles;
+  })();
 
   return {
     roles,
@@ -1107,64 +1125,7 @@ export class ExpenseController {
   });
 
   getExpenseCategories = asyncHandler(async (req, res) => {
-    // Return all expense categories grouped by type
-    const categories = {
-      OPERATIONAL: [
-        'FUEL', 'MAINTENANCE', 'REPAIRS', 'TYRES', 'INSURANCE', 
-        'ROAD_TOLLS', 'PARKING', 'DRIVER_ALLOWANCE', 'VEHICLE_REGISTRATION',
-        'VEHICLE_INSPECTION', 'OIL_CHANGE', 'BRAKE_PADS', 'BATTERY',
-        'LIGHTS', 'WIPERS', 'CAR_WASH', 'DETAILING'
-      ],
-      ADMINISTRATIVE: [
-        'SALARIES', 'WAGES', 'BONUSES', 'COMMISSIONS', 'STAFF_BENEFITS',
-        'PENSION', 'TRAINING', 'RECRUITMENT', 'RENT', 'UTILITIES',
-        'ELECTRICITY', 'WATER', 'INTERNET', 'TELEPHONE', 'OFFICE_SUPPLIES',
-        'STATIONERY', 'PRINTING', 'POSTAGE', 'COURIER', 'LEGAL_FEES',
-        'ACCOUNTING_FEES', 'CONSULTING_FEES', 'AUDIT_FEES', 'BANK_CHARGES',
-        'INTEREST', 'INSURANCE_ADMIN', 'SECURITY', 'CLEANING', 'WASTE_DISPOSAL'
-      ],
-      MARKETING: [
-        'ADVERTISING', 'DIGITAL_MARKETING', 'SOCIAL_MEDIA_ADS', 'PRINT_ADS',
-        'BILLBOARDS', 'RADIO_ADS', 'TV_ADS', 'PROMOTIONS', 'DISCOUNTS',
-        'WEBSITE', 'SEO', 'CONTENT_CREATION', 'BRANDING', 'EVENT_SPONSORSHIP',
-        'TRADE_SHOWS', 'MARKETING_MATERIALS', 'BROCHURES', 'FLYERS', 'BUSINESS_CARDS'
-      ],
-      CAPITAL: [
-        'VEHICLE_PURCHASE', 'VEHICLE_IMPORT', 'VEHICLE_CUSTOMS', 'EQUIPMENT',
-        'MACHINERY', 'TOOLS', 'FURNITURE', 'OFFICE_EQUIPMENT', 'COMPUTER',
-        'LAPTOP', 'PRINTER', 'SCANNER', 'SOFTWARE', 'LICENSE', 'SUBSCRIPTION',
-        'RENOVATION', 'CONSTRUCTION', 'BUILDING', 'LAND'
-      ],
-      SECURITY_SERVICES: [
-        'UNIFORMS', 'SECURITY_GEAR', 'GUARD_EQUIPMENT', 'CCTV_CAMERAS',
-        'CCTV_INSTALLATION', 'CCTV_MAINTENANCE', 'ALARM_SYSTEMS',
-        'ACCESS_CONTROL', 'SMART_HOME_DEVICES', 'SECURITY_CONSULTING',
-        'RISK_ASSESSMENT', 'SECURITY_AUDIT', 'GUARD_TRAINING',
-        'SECURITY_LICENSES', 'SECURITY_PERMITS', 'PATROL_VEHICLES',
-        'COMMUNICATION_EQUIPMENT', 'RADIOS', 'BODY_CAMERAS'
-      ],
-      CONSTRUCTION: [
-        'CONSTRUCTION_MATERIALS', 'CEMENT', 'SAND', 'GRAVEL', 'GRANITE',
-        'BLOCKS', 'BRICKS', 'TIMBER', 'STEEL', 'REINFORCEMENT', 'NAILS',
-        'SCREWS', 'PAINT', 'TILES', 'ROOFING', 'PLUMBING_MATERIALS',
-        'ELECTRICAL_MATERIALS', 'WIRES', 'CONDUITS', 'FITTINGS', 'FIXTURES',
-        'DOORS', 'WINDOWS', 'HARDWARE', 'TOOLS_CONSTRUCTION', 'EQUIPMENT_RENTAL',
-        'CRANE', 'EXCAVATOR', 'CONCRETE_MIXER', 'GENERATOR', 'SUBCONTRACTORS',
-        'LABOR', 'SKILLED_LABOR', 'UNSKILLED_LABOR', 'PERMITS', 'BUILDING_PERMITS',
-        'ENVIRONMENTAL_PERMITS', 'SAFETY_GEAR', 'HELMETS', 'BOOTS', 'VESTS',
-        'GLOVES', 'SITE_SECURITY', 'SITE_CLEANUP', 'WASTE_REMOVAL'
-      ],
-      TRAVEL: [
-        'LOCAL_TRAVEL', 'INTERNATIONAL_TRAVEL', 'AIRFARE', 'HOTEL', 'MEALS',
-        'TRANSPORTATION', 'TAXI', 'RENTAL_CAR', 'FUEL_TRAVEL', 'PARKING_TRAVEL',
-        'TOLLS_TRAVEL', 'VISA', 'PASSPORT'
-      ],
-      MISCELLANEOUS: [
-        'DONATIONS', 'CHARITY', 'GIFTS', 'ENTERTAINMENT', 'CLIENT_ENTERTAINMENT',
-        'STAFF_ENTERTAINMENT', 'TEAM_BUILDING', 'STAFF_PARTY', 'SUBSISTENCE',
-        'PETTY_CASH', 'CONTINGENCY', 'MISCELLANEOUS', 'OTHER'
-      ]
-    };
+    const categories = EXPENSE_CATEGORIES_BY_TYPE;
 
     res.json({
       success: true,

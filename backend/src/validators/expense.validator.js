@@ -3,7 +3,7 @@ import Joi from 'joi';
 export const validateExpense = (data, isUpdate = false) => {
   const schema = Joi.object({
     vehicleId: Joi.string().optional(),
-    expenseType: Joi.string().required(),
+    expenseType: Joi.string().optional(),
     expenseCategory: Joi.string().required(),
     expenseSubCategory: Joi.string().optional(),
     amount: Joi.number().positive().required(),

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import apiService from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../context/ThemeContext';
 import tempMainLogo from '../../assets/temp-main-company-logo.svg';
 
 const DEFAULT_COUNTRY = 'Nigeria';
@@ -44,6 +45,7 @@ const formatCurrency = (value) => new Intl.NumberFormat('en-NG', {
 const Subsidiaries = () => {
   const location = useLocation();
   const { showToast } = useToast();
+  const { mode } = useTheme();
   const isMainCompanyMode = location.pathname.startsWith('/company-setup/main-company');
   const [subsidiaries, setSubsidiaries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -471,26 +473,46 @@ const Subsidiaries = () => {
     await fetchStatesByCountry(nextCountry);
   };
 
+  const panelClass = mode === 'dark'
+    ? 'bg-slate-800 border border-slate-700 text-slate-100'
+    : 'bg-white text-gray-900';
+  const mutedTextClass = mode === 'dark' ? 'text-slate-300' : 'text-gray-600';
+  const titleTextClass = mode === 'dark' ? 'text-slate-100' : 'text-gray-800';
+  const labelClass = mode === 'dark' ? 'text-slate-200' : 'text-gray-700';
+  const helperTextClass = mode === 'dark' ? 'text-slate-400' : 'text-gray-500';
+  const inputClass = mode === 'dark'
+    ? 'w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500'
+    : 'w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500';
+  const selectClass = mode === 'dark'
+    ? 'w-full border border-slate-600 rounded-lg px-3 py-2 bg-slate-900 text-slate-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500'
+    : 'w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500';
+  const secondaryButtonClass = mode === 'dark'
+    ? 'bg-slate-700 text-slate-100 px-4 py-2 rounded-lg hover:bg-slate-600 flex items-center'
+    : 'bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center';
+  const outlineButtonClass = mode === 'dark'
+    ? 'px-4 py-2 border border-slate-600 rounded-lg text-slate-200 hover:bg-slate-700'
+    : 'px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50';
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">{isMainCompanyMode ? 'Main Company Setup' : 'Subsidiaries'}</h1>
-        <div className="flex items-center space-x-3">
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </button>
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center">
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </button>
+      <div className="flex flex-col gap-4">
+        <h1 className={`text-2xl font-bold ${titleTextClass}`}>{isMainCompanyMode ? 'Main Company Setup' : 'Subsidiaries'}</h1>
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleOpenAddModal}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
+            className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
           >
             <Plus className="h-4 w-4 mr-2" />
             {isMainCompanyMode ? 'Setup Main Company' : 'Add Subsidiary'}
+          </button>
+          <button className={secondaryButtonClass}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </button>
+          <button className={secondaryButtonClass}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import
           </button>
         </div>
       </div>
@@ -700,31 +722,31 @@ const Subsidiaries = () => {
 
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4 py-6">
+          <div className={`max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg shadow-xl ${panelClass}`}>
+            <div className={`p-6 border-b ${mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}`}>
+              <h2 className={`text-xl font-bold ${titleTextClass}`}>
                 {editingSubsidiaryId ? (isMainCompanyMode ? 'Edit Main Company' : 'Edit Subsidiary') : (isMainCompanyMode ? 'Setup Main Company' : 'Add New Subsidiary')}
               </h2>
             </div>
             <form className="p-6 space-y-4" onSubmit={handleSubmitSubsidiary}>
               {isMainCompanyMode && (
-                <div className="rounded-lg border border-red-100 bg-red-50 p-4">
+                <div className={`rounded-lg border p-4 ${mode === 'dark' ? 'border-red-900/60 bg-red-950/40' : 'border-red-100 bg-red-50'}`}>
                   <div className="flex items-center gap-4">
                     <img
                       src={logoPreview || tempMainLogo}
                       alt="Main company logo preview"
-                      className="h-16 w-16 rounded-lg border border-red-200 bg-white object-contain p-1"
+                      className={`h-16 w-16 rounded-lg object-contain p-1 ${mode === 'dark' ? 'border border-slate-600 bg-slate-900' : 'border border-red-200 bg-white'}`}
                     />
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Main Company Logo</label>
+                      <label className={`block text-sm font-medium mb-2 ${labelClass}`}>Main Company Logo</label>
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
                         onChange={handleLogoChange}
-                        className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-red-600 file:px-3 file:py-2 file:text-white hover:file:bg-red-700"
+                        className={`block w-full text-sm ${mutedTextClass} file:mr-3 file:rounded-md file:border-0 file:bg-red-600 file:px-3 file:py-2 file:text-white hover:file:bg-red-700`}
                       />
-                      <p className="mt-1 text-xs text-gray-600">
+                      <p className={`mt-1 text-xs ${mutedTextClass}`}>
                         Upload logo during Main Company setup. If none is uploaded, a temporary logo is used.
                       </p>
                     </div>
@@ -732,9 +754,9 @@ const Subsidiaries = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     Subsidiary Name *
                   </label>
                   <input
@@ -742,13 +764,13 @@ const Subsidiaries = () => {
                     type="text"
                     value={formValues.name}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={inputClass}
                     placeholder="e.g., MAPSI North America"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     Code *
                   </label>
                   <input
@@ -756,19 +778,19 @@ const Subsidiaries = () => {
                     type="text"
                     value={formValues.code}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={inputClass}
                     placeholder="e.g., MAPSI-NA"
                     disabled={isMainCompanyMode}
                     required
                   />
                   {isMainCompanyMode && (
-                    <p className="text-xs text-gray-500 mt-1">Main Company setup uses fixed code MAIN.</p>
+                    <p className={`mt-1 text-xs ${helperTextClass}`}>Main Company setup uses fixed code MAIN.</p>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                   Description
                 </label>
                 <input
@@ -776,13 +798,13 @@ const Subsidiaries = () => {
                   type="text"
                   value={formValues.description}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className={inputClass}
                   placeholder="Optional short description"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                   Address
                 </label>
                 <input
@@ -790,7 +812,7 @@ const Subsidiaries = () => {
                   type="text"
                   value={formValues.address}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className={inputClass}
                   placeholder="Street address"
                   disabled={sameAsMainLocation}
                 />
@@ -804,7 +826,7 @@ const Subsidiaries = () => {
                     onChange={handleSameAsMainLocationChange}
                     className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-sm text-gray-700">
+                  <span className={`ml-2 text-sm ${labelClass}`}>
                     Same as main location
                   </span>
                 </label>
@@ -819,13 +841,13 @@ const Subsidiaries = () => {
               {(!sameAsMainLocation || isMainCompanyMode) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     Country
                   </label>
                   <select
                     value={locationForm.country}
                     onChange={handleCountryChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={selectClass}
                     disabled={countryLoading}
                   >
                     {countryLoading ? (
@@ -839,13 +861,13 @@ const Subsidiaries = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     State/Province
                   </label>
                   <select
                     value={locationForm.state}
                     onChange={(event) => setLocationForm((prev) => ({ ...prev, state: event.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={selectClass}
                     disabled={stateLoading}
                   >
                     {stateLoading ? (
@@ -862,7 +884,7 @@ const Subsidiaries = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     City/Town
                   </label>
                   <input
@@ -870,12 +892,12 @@ const Subsidiaries = () => {
                     type="text"
                     value={formValues.city}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={inputClass}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     ZIP/Postal Code
                   </label>
                   <input
@@ -883,7 +905,7 @@ const Subsidiaries = () => {
                     type="text"
                     value={formValues.postalCode}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={inputClass}
                   />
                 </div>
                 </div>
@@ -891,14 +913,14 @@ const Subsidiaries = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     Status
                   </label>
                   <select
                     name="status"
                     value={formValues.status}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={selectClass}
                   >
                     <option>Active</option>
                     <option>Inactive</option>
@@ -912,9 +934,9 @@ const Subsidiaries = () => {
                 </p>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     Phone
                   </label>
                   <input
@@ -922,11 +944,11 @@ const Subsidiaries = () => {
                     type="tel"
                     value={formValues.phone}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                     Email
                   </label>
                   <input
@@ -934,13 +956,13 @@ const Subsidiaries = () => {
                     type="email"
                     value={formValues.email}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
                   Website
                 </label>
                 <input
@@ -948,7 +970,7 @@ const Subsidiaries = () => {
                   type="url"
                   value={formValues.website}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className={inputClass}
                   placeholder="https://"
                 />
               </div>
@@ -957,7 +979,7 @@ const Subsidiaries = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className={outlineButtonClass}
                 >
                   Cancel
                 </button>

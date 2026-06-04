@@ -1,42 +1,33 @@
-export const EXPENSE_CATEGORIES = {
-  OPERATIONAL: [
-    { value: 'FUEL', label: 'Fuel', icon: 'LocalGasStation' },
-    { value: 'MAINTENANCE', label: 'Maintenance', icon: 'Build' },
-    { value: 'REPAIRS', label: 'Repairs', icon: 'Build' },
-    { value: 'TYRES', label: 'Tyres', icon: 'Circle' },
-    { value: 'INSURANCE', label: 'Insurance', icon: 'Security' },
-    { value: 'ROAD_TOLLS', label: 'Road Tolls', icon: 'Road' },
-    { value: 'PARKING', label: 'Parking', icon: 'LocalParking' },
-    { value: 'DRIVER_ALLOWANCE', label: 'Driver Allowance', icon: 'Person' }
-  ],
-  ADMINISTRATIVE: [
-    { value: 'SALARIES', label: 'Salaries', icon: 'People' },
-    { value: 'RENT', label: 'Rent', icon: 'Home' },
-    { value: 'UTILITIES', label: 'Utilities', icon: 'ElectricalServices' },
-    { value: 'OFFICE_SUPPLIES', label: 'Office Supplies', icon: 'Inventory' },
-    { value: 'INTERNET', label: 'Internet', icon: 'Wifi' },
-    { value: 'LEGAL', label: 'Legal Fees', icon: 'Gavel' }
-  ],
-  CAPITAL: [
-    { value: 'VEHICLE_PURCHASE', label: 'Vehicle Purchase', icon: 'DirectionsCar' },
-    { value: 'EQUIPMENT', label: 'Equipment', icon: 'PrecisionManufacturing' },
-    { value: 'FURNITURE', label: 'Furniture', icon: 'Chair' },
-    { value: 'COMPUTER', label: 'Computer', icon: 'Computer' },
-    { value: 'SOFTWARE', label: 'Software', icon: 'Code' }
-  ],
-  SECURITY_SERVICES: [
-    { value: 'UNIFORMS', label: 'Uniforms', icon: 'Checkroom' },
-    { value: 'CCTV_CAMERAS', label: 'CCTV Cameras', icon: 'Videocam' },
-    { value: 'ALARM_SYSTEMS', label: 'Alarm Systems', icon: 'Notifications' },
-    { value: 'GUARD_TRAINING', label: 'Guard Training', icon: 'School' }
-  ],
-  CONSTRUCTION: [
-    { value: 'MATERIALS', label: 'Construction Materials', icon: 'Construction' },
-    { value: 'EQUIPMENT_RENTAL', label: 'Equipment Rental', icon: 'Handyman' },
-    { value: 'SUBCONTRACTORS', label: 'Subcontractors', icon: 'Groups' },
-    { value: 'PERMITS', label: 'Permits', icon: 'Assignment' }
-  ]
-};
+export const COLLAPSED_EXPENSE_CATEGORIES = [
+  'ELECTRICITY',
+  'INTERNET',
+  'SECURITY_FEE',
+  'AUDIT_AND_ACCOUNTANCY',
+  'REPAIRS_AND_MAINTENANCE',
+  'VEHICLE_REGISTRATION',
+  'VEHICLE_PARTICULARS',
+  'MEDICALS',
+  'VEHICLE_HIRE',
+  'AIRPORT_TICKETS_TOLLS',
+  'STATIONERIES',
+  'TOILETRIES',
+  'CAPITAL_EXPENDITURE',
+  'INSURANCE',
+  'OFFICE_EQUIPMENT',
+  'STAFF_SALARY',
+  'LICENSE_AND_LEVIES',
+  'BANK_CHARGES',
+  'TRANSPORT_AND_TRAVELING',
+  'ACCOMMODATION_AND_FEEDING',
+  'TELEPHONE_AND_POSTAGES',
+  'RENT',
+  'FUEL',
+  'FURNITURE_AND_FITTING',
+  'CONSULTANCY',
+  'ADVERTISEMENT_AND_SIGNAGE',
+];
+
+export const DEFAULT_EXPENSE_TYPE = 'ADMINISTRATIVE';
 
 export const EXPENSE_TYPES = [
   { value: 'OPERATIONAL', label: 'Operational', color: '#2196f3' },
@@ -45,9 +36,97 @@ export const EXPENSE_TYPES = [
   { value: 'CAPITAL', label: 'Capital', color: '#4caf50' },
   { value: 'SECURITY_SERVICES', label: 'Security Services', color: '#f44336' },
   { value: 'CONSTRUCTION', label: 'Construction', color: '#795548' },
-  { value: 'TRAVEL', label: 'Travel', color: '#607d8b' },
-  { value: 'MISCELLANEOUS', label: 'Miscellaneous', color: '#9e9e9e' }
+  { value: 'OTHER', label: 'Other', color: '#9e9e9e' }
 ];
+
+export const EXPENSE_CATEGORIES_BY_TYPE = Object.fromEntries(
+  EXPENSE_TYPES.map(({ value }) => [
+    value,
+    COLLAPSED_EXPENSE_CATEGORIES.map((category) => ({
+      value: category,
+      label: formatExpenseCategoryLabel(category),
+      icon: getExpenseCategoryIcon(category),
+    })),
+  ])
+);
+
+export const EXPENSE_CATEGORY_OPTIONS = COLLAPSED_EXPENSE_CATEGORIES.map((category) => ({
+  value: category,
+  label: formatExpenseCategoryLabel(category),
+  icon: getExpenseCategoryIcon(category),
+}));
+
+export const VEHICLE_RELATED_EXPENSE_CATEGORIES = new Set([
+  'FUEL',
+  'INSURANCE',
+  'VEHICLE_REGISTRATION',
+  'VEHICLE_PARTICULARS',
+  'VEHICLE_HIRE',
+]);
+
+function formatExpenseCategoryLabel(value) {
+  if (value === 'ADVERTISEMENT_AND_SIGNAGE') return 'Advertisement and Signage';
+  if (value === 'AUDIT_AND_ACCOUNTANCY') return 'Audit and Accountancy';
+  if (value === 'AIRPORT_TICKETS_TOLLS') return 'Airport Tickets/Tolls';
+  return String(value || '')
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getExpenseCategoryIcon(category) {
+  switch (category) {
+    case 'FUEL':
+      return 'LocalGasStation';
+    case 'REPAIRS_AND_MAINTENANCE':
+      return 'Build';
+    case 'INSURANCE':
+    case 'SECURITY_FEE':
+      return 'Security';
+    case 'INTERNET':
+      return 'Wifi';
+    case 'ELECTRICITY':
+      return 'ElectricalServices';
+    case 'VEHICLE_REGISTRATION':
+    case 'VEHICLE_HIRE':
+    case 'VEHICLE_PARTICULARS':
+      return 'DirectionsCar';
+    case 'MEDICALS':
+      return 'MedicalServices';
+    case 'AIRPORT_TICKETS_TOLLS':
+    case 'TRANSPORT_AND_TRAVELING':
+      return 'Flight';
+    case 'STATIONERIES':
+      return 'EditNote';
+    case 'TOILETRIES':
+      return 'Sanitizer';
+    case 'CAPITAL_EXPENDITURE':
+    case 'BANK_CHARGES':
+      return 'AccountBalanceWallet';
+    case 'OFFICE_EQUIPMENT':
+      return 'Inventory2';
+    case 'STAFF_SALARY':
+      return 'People';
+    case 'LICENSE_AND_LEVIES':
+      return 'AssignmentTurnedIn';
+    case 'ACCOMMODATION_AND_FEEDING':
+      return 'Hotel';
+    case 'TELEPHONE_AND_POSTAGES':
+      return 'Call';
+    case 'RENT':
+      return 'Home';
+    case 'FURNITURE_AND_FITTING':
+      return 'Chair';
+    case 'CONSULTANCY':
+      return 'SupportAgent';
+    case 'ADVERTISEMENT_AND_SIGNAGE':
+      return 'Campaign';
+    default:
+      return 'ReceiptLong';
+  }
+}
+
+export const EXPENSE_CATEGORIES = EXPENSE_CATEGORIES_BY_TYPE;
 
 export const PAYMENT_STATUS = [
   { value: 'PAID', label: 'Paid', color: 'success' },

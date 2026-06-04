@@ -45,12 +45,15 @@ import LocalGasStation from '@mui/icons-material/LocalGasStation';
 import Build from '@mui/icons-material/Build';
 import Person from '@mui/icons-material/Person';
 import DirectionsCar from '@mui/icons-material/DirectionsCar';
+import {
+  COLLAPSED_EXPENSE_CATEGORIES,
+  DEFAULT_EXPENSE_TYPE,
+} from '../../constants/expenseCategories';
 
 const MAIN_SUBSIDIARY_CODE = 'MAIN';
 
 // Validation schema for expense form
 const expenseValidationSchema = Yup.object({
-  expenseType: Yup.string().required('Expense type is required'),
   expenseCategory: Yup.string().required('Expense category is required'),
   amount: Yup.number()
     .positive('Amount must be positive')
@@ -148,70 +151,11 @@ export const ExpenseTracker = () => {
   // File upload
   const [uploading, setUploading] = useState(false);
 
-  // Expense categories from constants
-  const expenseCategories = {
-    OPERATIONAL: [
-      'FUEL', 'MAINTENANCE', 'REPAIRS', 'TYRES', 'INSURANCE', 
-      'ROAD_TOLLS', 'PARKING', 'DRIVER_ALLOWANCE', 'VEHICLE_REGISTRATION',
-      'VEHICLE_INSPECTION', 'OIL_CHANGE', 'BRAKE_PADS', 'BATTERY',
-      'LIGHTS', 'WIPERS', 'CAR_WASH', 'DETAILING'
-    ],
-    ADMINISTRATIVE: [
-      'SALARIES', 'WAGES', 'BONUSES', 'COMMISSIONS', 'STAFF_BENEFITS',
-      'PENSION', 'TRAINING', 'RECRUITMENT', 'RENT', 'UTILITIES',
-      'ELECTRICITY', 'WATER', 'INTERNET', 'TELEPHONE', 'OFFICE_SUPPLIES',
-      'STATIONERY', 'PRINTING', 'POSTAGE', 'COURIER', 'LEGAL_FEES',
-      'ACCOUNTING_FEES', 'CONSULTING_FEES', 'AUDIT_FEES', 'BANK_CHARGES',
-      'INTEREST', 'INSURANCE_ADMIN', 'SECURITY', 'CLEANING', 'WASTE_DISPOSAL'
-    ],
-    MARKETING: [
-      'ADVERTISING', 'DIGITAL_MARKETING', 'SOCIAL_MEDIA_ADS', 'PRINT_ADS',
-      'BILLBOARDS', 'RADIO_ADS', 'TV_ADS', 'PROMOTIONS', 'DISCOUNTS',
-      'WEBSITE', 'SEO', 'CONTENT_CREATION', 'BRANDING', 'EVENT_SPONSORSHIP',
-      'TRADE_SHOWS', 'MARKETING_MATERIALS', 'BROCHURES', 'FLYERS', 'BUSINESS_CARDS'
-    ],
-    CAPITAL: [
-      'VEHICLE_PURCHASE', 'VEHICLE_IMPORT', 'VEHICLE_CUSTOMS', 'EQUIPMENT',
-      'MACHINERY', 'TOOLS', 'FURNITURE', 'OFFICE_EQUIPMENT', 'COMPUTER',
-      'LAPTOP', 'PRINTER', 'SCANNER', 'SOFTWARE', 'LICENSE', 'SUBSCRIPTION',
-      'RENOVATION', 'CONSTRUCTION', 'BUILDING', 'LAND'
-    ],
-    SECURITY_SERVICES: [
-      'UNIFORMS', 'SECURITY_GEAR', 'GUARD_EQUIPMENT', 'CCTV_CAMERAS',
-      'CCTV_INSTALLATION', 'CCTV_MAINTENANCE', 'ALARM_SYSTEMS',
-      'ACCESS_CONTROL', 'SMART_HOME_DEVICES', 'SECURITY_CONSULTING',
-      'RISK_ASSESSMENT', 'SECURITY_AUDIT', 'GUARD_TRAINING',
-      'SECURITY_LICENSES', 'SECURITY_PERMITS', 'PATROL_VEHICLES',
-      'COMMUNICATION_EQUIPMENT', 'RADIOS', 'BODY_CAMERAS'
-    ],
-    CONSTRUCTION: [
-      'CONSTRUCTION_MATERIALS', 'CEMENT', 'SAND', 'GRAVEL', 'GRANITE',
-      'BLOCKS', 'BRICKS', 'TIMBER', 'STEEL', 'REINFORCEMENT', 'NAILS',
-      'SCREWS', 'PAINT', 'TILES', 'ROOFING', 'PLUMBING_MATERIALS',
-      'ELECTRICAL_MATERIALS', 'WIRES', 'CONDUITS', 'FITTINGS', 'FIXTURES',
-      'DOORS', 'WINDOWS', 'HARDWARE', 'TOOLS_CONSTRUCTION', 'EQUIPMENT_RENTAL',
-      'CRANE', 'EXCAVATOR', 'CONCRETE_MIXER', 'GENERATOR', 'SUBCONTRACTORS',
-      'LABOR', 'SKILLED_LABOR', 'UNSKILLED_LABOR', 'PERMITS', 'BUILDING_PERMITS',
-      'ENVIRONMENTAL_PERMITS', 'SAFETY_GEAR', 'HELMETS', 'BOOTS', 'VESTS',
-      'GLOVES', 'SITE_SECURITY', 'SITE_CLEANUP', 'WASTE_REMOVAL'
-    ],
-    TRAVEL: [
-      'LOCAL_TRAVEL', 'INTERNATIONAL_TRAVEL', 'AIRFARE', 'HOTEL', 'MEALS',
-      'TRANSPORTATION', 'TAXI', 'RENTAL_CAR', 'FUEL_TRAVEL', 'PARKING_TRAVEL',
-      'TOLLS_TRAVEL', 'VISA', 'PASSPORT'
-    ],
-    MISCELLANEOUS: [
-      'DONATIONS', 'CHARITY', 'GIFTS', 'ENTERTAINMENT', 'CLIENT_ENTERTAINMENT',
-      'STAFF_ENTERTAINMENT', 'TEAM_BUILDING', 'STAFF_PARTY', 'SUBSISTENCE',
-      'PETTY_CASH', 'CONTINGENCY', 'MISCELLANEOUS', 'OTHER'
-    ]
-  };
-
   // Formik for expense form
   const formik = useFormik({
     initialValues: {
-      expenseType: '',
-      expenseCategory: '',
+      expenseType: DEFAULT_EXPENSE_TYPE,
+      expenseCategory: COLLAPSED_EXPENSE_CATEGORIES[0],
       amount: '',
       quantity: '',
       unitPrice: '',
@@ -234,6 +178,7 @@ export const ExpenseTracker = () => {
       try {
         const payload = {
           ...values,
+          expenseType: DEFAULT_EXPENSE_TYPE,
         };
 
         // Calculate amount if quantity and unit price provided
@@ -363,8 +308,8 @@ export const ExpenseTracker = () => {
   const handleEditExpense = (expense) => {
     selectExpense(expense);
     formik.setValues({
-      expenseType: expense.expenseType || '',
-      expenseCategory: expense.expenseCategory || '',
+      expenseType: expense.expenseType || DEFAULT_EXPENSE_TYPE,
+      expenseCategory: expense.expenseCategory || COLLAPSED_EXPENSE_CATEGORIES[0],
       amount: expense.amount || '',
       quantity: expense.quantity || '',
       unitPrice: expense.unitPrice || '',
@@ -786,31 +731,6 @@ export const ExpenseTracker = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Expense Type *</InputLabel>
-                    <Select
-                      name="expenseType"
-                      value={formik.values.expenseType}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      error={formik.touched.expenseType && Boolean(formik.errors.expenseType)}
-                    >
-                      <MenuItem value="OPERATIONAL">Operational</MenuItem>
-                      <MenuItem value="ADMINISTRATIVE">Administrative</MenuItem>
-                      <MenuItem value="MARKETING">Marketing</MenuItem>
-                      <MenuItem value="CAPITAL">Capital</MenuItem>
-                      <MenuItem value="SECURITY_SERVICES">Security Services</MenuItem>
-                      <MenuItem value="CONSTRUCTION">Construction</MenuItem>
-                      <MenuItem value="TRAVEL">Travel</MenuItem>
-                      <MenuItem value="MISCELLANEOUS">Miscellaneous</MenuItem>
-                    </Select>
-                    {formik.touched.expenseType && formik.errors.expenseType && (
-                      <FormHelperText error>{formik.errors.expenseType}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
                     <InputLabel>Expense Category *</InputLabel>
                     <Select
                       name="expenseCategory"
@@ -819,8 +739,7 @@ export const ExpenseTracker = () => {
                       onBlur={formik.handleBlur}
                       error={formik.touched.expenseCategory && Boolean(formik.errors.expenseCategory)}
                     >
-                      {formik.values.expenseType && 
-                       expenseCategories[formik.values.expenseType]?.map(category => (
+                      {COLLAPSED_EXPENSE_CATEGORIES.map(category => (
                         <MenuItem key={category} value={category}>
                           {category.replace(/_/g, ' ')}
                         </MenuItem>
@@ -908,7 +827,7 @@ export const ExpenseTracker = () => {
 
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Vehicle (Optional)</InputLabel>
+                    <InputLabel>Car Number (Optional)</InputLabel>
                     <Select
                       name="vehicleId"
                       value={formik.values.vehicleId}

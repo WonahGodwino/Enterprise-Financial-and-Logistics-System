@@ -579,7 +579,7 @@ const Vehicles = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="pt-16 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Vehicle Fleet</h1>

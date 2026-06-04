@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Menu, Trash2, X } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 
 const Layout = () => {
@@ -21,7 +21,7 @@ const Layout = () => {
   } = useNotification();
   const currentYear = new Date().getFullYear();
 
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  const handleDrawerToggle = () => setMobileOpen((prev) => !prev);
   const recentNotifications = notifications.slice(0, 8);
 
   const formatNotificationTime = (timestamp) => {
@@ -40,14 +40,19 @@ const Layout = () => {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${mode === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-amber-50/40 text-gray-900'}`}>
       {/* Sidebar (Tailwind) */}
-      <Sidebar open={mobileOpen} onClose={handleDrawerToggle} variant={mobileOpen ? 'temporary' : 'permanent'} />
+      <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} variant={mobileOpen ? 'temporary' : 'permanent'} />
 
       {/* Header */}
       <header className={`fixed top-0 left-0 right-0 h-16 border-b shadow-sm flex items-center z-30 transition-colors duration-300 ${mode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-red-600 border-red-700'}`}>
-        <div className={`w-full px-5 md:ml-72 md:px-6 flex items-center justify-between`}> {/* offset for sidebar */}
+        <div className={`w-full px-4 md:px-6 lg:ml-72 flex items-center justify-between`}> {/* offset for sidebar */}
           <div className="flex items-center gap-3">
-            <button onClick={handleDrawerToggle} className={`p-2 rounded-md md:hidden ${mode === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-red-700'}`}>
-              <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M3 6h14M3 10h14M3 14h14" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <button
+              type="button"
+              onClick={handleDrawerToggle}
+              className={`p-2 rounded-md lg:hidden ${mode === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-red-700'}`}
+              aria-label={mobileOpen ? 'Close sidebar' : 'Open sidebar'}
+            >
+              {mobileOpen ? <X className="h-5 w-5 text-white" /> : <Menu className="h-5 w-5 text-white" />}
             </button>
             <h1 className="text-lg font-semibold text-white">
               Welcome, {user?.fullName}
@@ -155,12 +160,14 @@ const Layout = () => {
       </header>
 
       {/* Main content area */}
-      <main className={`pt-16 p-6 flex-1 md:ml-72 transition-colors duration-300 ${mode === 'dark' ? 'bg-slate-900' : 'bg-amber-50/40'}`}>
-        <Outlet />
+      <main className={`pt-16 p-4 md:p-6 flex-1 md:ml-72 transition-colors duration-300 ${mode === 'dark' ? 'bg-slate-900' : 'bg-amber-50/40'}`}>
+        <div className="max-w-full overflow-x-auto">
+          <Outlet />
+        </div>
       </main>
 
       {/* Global footer */}
-      <footer className={`border-t px-6 py-4 text-xs md:ml-72 transition-colors duration-300 ${mode === 'dark' ? 'border-slate-700 bg-slate-800 text-slate-300' : 'border-gray-200 bg-white text-gray-600'}`}>
+      <footer className={`border-t px-4 md:px-6 py-4 text-xs md:ml-72 transition-colors duration-300 ${mode === 'dark' ? 'border-slate-700 bg-slate-800 text-slate-300' : 'border-gray-200 bg-white text-gray-600'}`}>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className={`font-medium ${mode === 'dark' ? 'text-slate-100' : 'text-gray-700'}`}>© {currentYear} MAPSI-EFMS. All rights reserved.</p>

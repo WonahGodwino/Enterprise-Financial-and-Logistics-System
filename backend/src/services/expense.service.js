@@ -6,82 +6,15 @@ import { TransactionLedgerService } from './transactionLedger.service.js';
 import { AppError } from '../utils/AppError.js';
 import prisma from '../config/database.js';
 import { resolveScopedSubsidiaryId } from '../utils/subsidiaryScope.js';
+import {
+  DEFAULT_EXPENSE_TYPE,
+  EXPENSE_CATEGORIES_BY_TYPE,
+  VEHICLE_RELATED_EXPENSE_CATEGORIES,
+} from '../constants/expenseCategories.js';
 
-const EXPENSE_CATEGORIES_BY_TYPE = {
-  OPERATIONAL: [
-    'FUEL', 'MAINTENANCE', 'REPAIRS', 'TYRES', 'INSURANCE',
-    'ROAD_TOLLS', 'PARKING', 'DRIVER_ALLOWANCE', 'VEHICLE_REGISTRATION',
-    'VEHICLE_INSPECTION', 'OIL_CHANGE', 'BRAKE_PADS', 'BATTERY',
-    'LIGHTS', 'WIPERS', 'CAR_WASH', 'DETAILING'
-  ],
-  ADMINISTRATIVE: [
-    'SALARIES', 'WAGES', 'BONUSES', 'COMMISSIONS', 'STAFF_BENEFITS',
-    'PENSION', 'TRAINING', 'RECRUITMENT', 'RENT', 'UTILITIES',
-    'ELECTRICITY', 'WATER', 'INTERNET', 'TELEPHONE', 'OFFICE_SUPPLIES',
-    'STATIONERY', 'PRINTING', 'POSTAGE', 'COURIER', 'LEGAL_FEES',
-    'ACCOUNTING_FEES', 'CONSULTING_FEES', 'AUDIT_FEES', 'BANK_CHARGES',
-    'INTEREST', 'INSURANCE_ADMIN', 'SECURITY', 'CLEANING', 'WASTE_DISPOSAL'
-  ],
-  MARKETING: [
-    'ADVERTISING', 'DIGITAL_MARKETING', 'SOCIAL_MEDIA_ADS', 'PRINT_ADS',
-    'BILLBOARDS', 'RADIO_ADS', 'TV_ADS', 'PROMOTIONS', 'DISCOUNTS',
-    'WEBSITE', 'SEO', 'CONTENT_CREATION', 'BRANDING', 'EVENT_SPONSORSHIP',
-    'TRADE_SHOWS', 'MARKETING_MATERIALS', 'BROCHURES', 'FLYERS', 'BUSINESS_CARDS'
-  ],
-  CAPITAL: [
-    'VEHICLE_PURCHASE', 'VEHICLE_IMPORT', 'VEHICLE_CUSTOMS', 'EQUIPMENT',
-    'MACHINERY', 'TOOLS', 'FURNITURE', 'OFFICE_EQUIPMENT', 'COMPUTER',
-    'LAPTOP', 'PRINTER', 'SCANNER', 'SOFTWARE', 'LICENSE', 'SUBSCRIPTION',
-    'RENOVATION', 'CONSTRUCTION', 'BUILDING', 'LAND'
-  ],
-  SECURITY_SERVICES: [
-    'UNIFORMS', 'SECURITY_GEAR', 'GUARD_EQUIPMENT', 'CCTV_CAMERAS',
-    'CCTV_INSTALLATION', 'CCTV_MAINTENANCE', 'ALARM_SYSTEMS',
-    'ACCESS_CONTROL', 'SMART_HOME_DEVICES', 'SECURITY_CONSULTING',
-    'RISK_ASSESSMENT', 'SECURITY_AUDIT', 'GUARD_TRAINING',
-    'SECURITY_LICENSES', 'SECURITY_PERMITS', 'PATROL_VEHICLES',
-    'COMMUNICATION_EQUIPMENT', 'RADIOS', 'BODY_CAMERAS'
-  ],
-  CONSTRUCTION: [
-    'CONSTRUCTION_MATERIALS', 'CEMENT', 'SAND', 'GRAVEL', 'GRANITE',
-    'BLOCKS', 'BRICKS', 'TIMBER', 'STEEL', 'REINFORCEMENT', 'NAILS',
-    'SCREWS', 'PAINT', 'TILES', 'ROOFING', 'PLUMBING_MATERIALS',
-    'ELECTRICAL_MATERIALS', 'WIRES', 'CONDUITS', 'FITTINGS', 'FIXTURES',
-    'DOORS', 'WINDOWS', 'HARDWARE', 'TOOLS_CONSTRUCTION', 'EQUIPMENT_RENTAL',
-    'CRANE', 'EXCAVATOR', 'CONCRETE_MIXER', 'GENERATOR', 'SUBCONTRACTORS',
-    'LABOR', 'SKILLED_LABOR', 'UNSKILLED_LABOR', 'PERMITS', 'BUILDING_PERMITS',
-    'ENVIRONMENTAL_PERMITS', 'SAFETY_GEAR', 'HELMETS', 'BOOTS', 'VESTS',
-    'GLOVES', 'SITE_SECURITY', 'SITE_CLEANUP', 'WASTE_REMOVAL'
-  ],
-  OTHER: ['OTHER']
-};
-
-const VEHICLE_RELATED_EXPENSE_CATEGORIES = new Set([
-  'FUEL',
-  'MAINTENANCE',
-  'REPAIRS',
-  'TYRES',
-  'INSURANCE',
-  'ROAD_TOLLS',
-  'PARKING',
-  'DRIVER_ALLOWANCE',
-  'VEHICLE_REGISTRATION',
-  'VEHICLE_INSPECTION',
-  'OIL_CHANGE',
-  'BRAKE_PADS',
-  'BATTERY',
-  'LIGHTS',
-  'WIPERS',
-  'CAR_WASH',
-  'DETAILING',
-  'VEHICLE_PURCHASE',
-  'VEHICLE_IMPORT',
-  'VEHICLE_CUSTOMS',
-  'PATROL_VEHICLES',
-]);
-
-const STRICT_VEHICLE_REQUEST_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER', 'CEO', 'SUPER_ADMIN']);
-const EXECUTIVE_STAGE_ROLES = ['SUPER_ADMIN', 'CEO'];
+const STRICT_VEHICLE_REQUEST_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER']);
+const EXECUTIVE_STAGE_ROLES = ['CEO', 'SUPER_ADMIN'];
+const EXECUTIVE_PRIMARY_ROLES = new Set(['ADMIN', 'CEO']);
 
 export class ExpenseService {
   constructor() {
@@ -172,9 +105,13 @@ export class ExpenseService {
   buildInitialWorkflow({ requesterRole, chiefRecipientIds = [], expenseCategory }) {
     const normalizedRole = this.normalizeRole(requesterRole);
 
-    // ADMIN submissions: only SUPER_ADMIN and CEO at shared stage (either one approves)
+    // ADMIN submissions go straight to CEO as the primary approval line.
     if (normalizedRole === 'ADMIN') {
-      // Keep a single stage and use parallelRolesByStage so either SUPER_ADMIN or CEO can finalize.
+      return ['CEO'];
+    }
+
+    // CEO submissions stay at executive approval stage with SUPER_ADMIN as fallback.
+    if (normalizedRole === 'CEO') {
       return ['CEO'];
     }
 
@@ -189,8 +126,8 @@ export class ExpenseService {
   }
 
   buildParallelRolesByStage({ requesterRole, expenseCategory }) {
-    // ADMIN submissions always have shared SUPER_ADMIN/CEO approval stage
-    if (this.normalizeRole(requesterRole) === 'ADMIN') {
+    // CEO submissions keep CEO as primary approver while allowing SUPER_ADMIN to stand in.
+    if (this.normalizeRole(requesterRole) === 'CEO') {
       return { 0: EXECUTIVE_STAGE_ROLES };
     }
     return {};
@@ -201,6 +138,7 @@ export class ExpenseService {
     const parallelRolesByStage = workflowInit && typeof workflowInit.parallelRolesByStage === 'object'
       ? workflowInit.parallelRolesByStage
       : {};
+    const initiatedByRole = this.normalizeRole(workflowInit?.initiatedByRole);
 
     const parallelRoles = Array.isArray(parallelRolesByStage[indexKey])
       ? parallelRolesByStage[indexKey]
@@ -209,11 +147,19 @@ export class ExpenseService {
         : null;
 
     if (parallelRoles && parallelRoles.length > 0) {
-      return [...new Set(parallelRoles.map((role) => this.normalizeRole(role)).filter(Boolean))];
+      const normalizedParallelRoles = [...new Set(parallelRoles.map((role) => this.normalizeRole(role)).filter(Boolean))];
+      if (EXECUTIVE_PRIMARY_ROLES.has(initiatedByRole) && normalizedParallelRoles.includes('CEO')) {
+        return EXECUTIVE_STAGE_ROLES.filter((role) => normalizedParallelRoles.includes(role));
+      }
+      return normalizedParallelRoles;
     }
 
-    const stageRole = roles[stageIndex];
-    return stageRole ? [this.normalizeRole(stageRole)] : [];
+    const normalizedStageRole = this.normalizeRole(roles[stageIndex]);
+    if (EXECUTIVE_PRIMARY_ROLES.has(initiatedByRole) && normalizedStageRole === 'SUPER_ADMIN') {
+      return EXECUTIVE_STAGE_ROLES;
+    }
+
+    return normalizedStageRole ? [normalizedStageRole] : [];
   }
 
   parseWorkflowState(expense) {
@@ -365,7 +311,7 @@ export class ExpenseService {
 
       if (STRICT_VEHICLE_REQUEST_ROLES.has(actorRole)) {
         if (!VEHICLE_RELATED_EXPENSE_CATEGORIES.has(normalizedExpenseCategory)) {
-          throw new AppError('Driver, Chief Driver, CEO and Super Admin can only submit car-related expenses', 400);
+          throw new AppError('Driver and Chief Driver can only submit car-related expenses', 400);
         }
         if (!data.vehicleId) {
           throw new AppError('Vehicle is required for car-related expense requests by this role', 400);
@@ -494,6 +440,7 @@ export class ExpenseService {
 
       const scopedData = {
         ...data,
+        expenseType: String(data.expenseType || DEFAULT_EXPENSE_TYPE).toUpperCase(),
         subsidiaryId: resolvedSubsidiaryId,
         approvalHistory: initialApprovalHistory,
         approvalLevel: 0,
@@ -603,7 +550,7 @@ export class ExpenseService {
   }
 
   async validateExpense(data) {
-    const expenseType = String(data.expenseType || '').toUpperCase();
+    const expenseType = String(data.expenseType || DEFAULT_EXPENSE_TYPE).toUpperCase();
     const expenseCategory = String(data.expenseCategory || '').toUpperCase();
 
     // Required fields
@@ -613,10 +560,6 @@ export class ExpenseService {
 
     if (!data.expenseDate) {
       throw new AppError('Expense date is required', 400);
-    }
-
-    if (!expenseType) {
-      throw new AppError('Expense type is required', 400);
     }
 
     if (!expenseCategory) {
@@ -629,11 +572,6 @@ export class ExpenseService {
         `Expense category ${expenseCategory} is not valid for type ${expenseType}`,
         400
       );
-    }
-
-    // For fuel expenses, a linked vehicle is required.
-    if (expenseCategory === 'FUEL' && !data.vehicleId) {
-      throw new AppError('Vehicle selection is required for fuel expenses', 400);
     }
 
     // Validate date not in future
@@ -670,10 +608,9 @@ export class ExpenseService {
     // Check for unreasonable amounts by category
     const categoryLimits = {
       FUEL: 50000,
-      MAINTENANCE: 200000,
-      REPAIRS: 300000,
-      SALARIES: 1000000,
-      VEHICLE_PURCHASE: 20000000
+      REPAIRS_AND_MAINTENANCE: 300000,
+      STAFF_SALARY: 1000000,
+      CAPITAL_EXPENDITURE: 20000000,
     };
 
     if (categoryLimits[data.expenseCategory] && 

@@ -20,87 +20,29 @@ import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import {
+  COLLAPSED_EXPENSE_CATEGORIES,
+  DEFAULT_EXPENSE_TYPE,
+  VEHICLE_RELATED_EXPENSE_CATEGORIES,
+} from '../../constants/expenseCategories';
 
-const EXPENSE_CATEGORIES_BY_TYPE = {
-  OPERATIONAL: [
-    'FUEL', 'MAINTENANCE', 'REPAIRS', 'TYRES', 'INSURANCE',
-    'ROAD_TOLLS', 'PARKING', 'DRIVER_ALLOWANCE', 'VEHICLE_REGISTRATION',
-    'VEHICLE_INSPECTION', 'OIL_CHANGE', 'BRAKE_PADS', 'BATTERY',
-    'LIGHTS', 'WIPERS', 'CAR_WASH', 'DETAILING'
-  ],
-  ADMINISTRATIVE: [
-    'SALARIES', 'WAGES', 'BONUSES', 'COMMISSIONS', 'STAFF_BENEFITS',
-    'PENSION', 'TRAINING', 'RECRUITMENT', 'RENT', 'UTILITIES',
-    'ELECTRICITY', 'WATER', 'INTERNET', 'TELEPHONE', 'OFFICE_SUPPLIES',
-    'STATIONERY', 'PRINTING', 'POSTAGE', 'COURIER', 'LEGAL_FEES',
-    'ACCOUNTING_FEES', 'CONSULTING_FEES', 'AUDIT_FEES', 'BANK_CHARGES',
-    'INTEREST', 'INSURANCE_ADMIN', 'SECURITY', 'CLEANING', 'WASTE_DISPOSAL'
-  ],
-  MARKETING: [
-    'ADVERTISING', 'DIGITAL_MARKETING', 'SOCIAL_MEDIA_ADS', 'PRINT_ADS',
-    'BILLBOARDS', 'RADIO_ADS', 'TV_ADS', 'PROMOTIONS', 'DISCOUNTS',
-    'WEBSITE', 'SEO', 'CONTENT_CREATION', 'BRANDING', 'EVENT_SPONSORSHIP',
-    'TRADE_SHOWS', 'MARKETING_MATERIALS', 'BROCHURES', 'FLYERS', 'BUSINESS_CARDS'
-  ],
-  CAPITAL: [
-    'VEHICLE_PURCHASE', 'VEHICLE_IMPORT', 'VEHICLE_CUSTOMS', 'EQUIPMENT',
-    'MACHINERY', 'TOOLS', 'FURNITURE', 'OFFICE_EQUIPMENT', 'COMPUTER',
-    'LAPTOP', 'PRINTER', 'SCANNER', 'SOFTWARE', 'LICENSE', 'SUBSCRIPTION',
-    'RENOVATION', 'CONSTRUCTION', 'BUILDING', 'LAND'
-  ],
-  SECURITY_SERVICES: [
-    'UNIFORMS', 'SECURITY_GEAR', 'GUARD_EQUIPMENT', 'CCTV_CAMERAS',
-    'CCTV_INSTALLATION', 'CCTV_MAINTENANCE', 'ALARM_SYSTEMS',
-    'ACCESS_CONTROL', 'SMART_HOME_DEVICES', 'SECURITY_CONSULTING',
-    'RISK_ASSESSMENT', 'SECURITY_AUDIT', 'GUARD_TRAINING',
-    'SECURITY_LICENSES', 'SECURITY_PERMITS', 'PATROL_VEHICLES',
-    'COMMUNICATION_EQUIPMENT', 'RADIOS', 'BODY_CAMERAS'
-  ],
-  CONSTRUCTION: [
-    'CONSTRUCTION_MATERIALS', 'CEMENT', 'SAND', 'GRAVEL', 'GRANITE',
-    'BLOCKS', 'BRICKS', 'TIMBER', 'STEEL', 'REINFORCEMENT', 'NAILS',
-    'SCREWS', 'PAINT', 'TILES', 'ROOFING', 'PLUMBING_MATERIALS',
-    'ELECTRICAL_MATERIALS', 'WIRES', 'CONDUITS', 'FITTINGS', 'FIXTURES',
-    'DOORS', 'WINDOWS', 'HARDWARE', 'TOOLS_CONSTRUCTION', 'EQUIPMENT_RENTAL',
-    'CRANE', 'EXCAVATOR', 'CONCRETE_MIXER', 'GENERATOR', 'SUBCONTRACTORS',
-    'LABOR', 'SKILLED_LABOR', 'UNSKILLED_LABOR', 'PERMITS', 'BUILDING_PERMITS',
-    'ENVIRONMENTAL_PERMITS', 'SAFETY_GEAR', 'HELMETS', 'BOOTS', 'VESTS',
-    'GLOVES', 'SITE_SECURITY', 'SITE_CLEANUP', 'WASTE_REMOVAL'
-  ],
-  OTHER: ['OTHER']
+const formatExpenseOptionLabel = (value) => {
+  if (value === 'ADVERTISEMENT_AND_SIGNAGE') return 'Advertisement and Signage';
+  if (value === 'AUDIT_AND_ACCOUNTANCY') return 'Audit and Accountancy';
+  if (value === 'AIRPORT_TICKETS_TOLLS') return 'Airport Tickets/Tolls';
+  return String(value || '')
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 };
-
-const EXPENSE_TYPE_OPTIONS = Object.keys(EXPENSE_CATEGORIES_BY_TYPE);
-const VEHICLE_RELATED_EXPENSE_CATEGORIES = new Set([
-  'FUEL',
-  'MAINTENANCE',
-  'REPAIRS',
-  'TYRES',
-  'INSURANCE',
-  'ROAD_TOLLS',
-  'PARKING',
-  'DRIVER_ALLOWANCE',
-  'VEHICLE_REGISTRATION',
-  'VEHICLE_INSPECTION',
-  'OIL_CHANGE',
-  'BRAKE_PADS',
-  'BATTERY',
-  'LIGHTS',
-  'WIPERS',
-  'CAR_WASH',
-  'DETAILING',
-  'VEHICLE_PURCHASE',
-  'VEHICLE_IMPORT',
-  'VEHICLE_CUSTOMS',
-  'PATROL_VEHICLES',
-]);
 
 const MAIN_SUBSIDIARY_CODE = 'MAIN';
 const EXPENSES_PER_PAGE = 10;
 const EXPENSE_APPROVER_ROLES = new Set(['CHIEF_DRIVER', 'ADMIN', 'CEO', 'SUPER_ADMIN']);
 const EXECUTIVE_APPROVER_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
 const EXPENSE_REQUESTER_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN', 'AUDITOR', 'EMPLOYEE', 'SUPERVISOR']);
-const STRICT_VEHICLE_REQUEST_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER', 'CEO', 'SUPER_ADMIN']);
+const EXPENSE_ACTION_ROLES = new Set(['ADMIN', 'SUPER_ADMIN', 'CEO']);
+const STRICT_VEHICLE_REQUEST_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER']);
 const RECEIPT_UPLOAD_ALLOWED_ROLES = new Set(['CHIEF_DRIVER', 'ADMIN', 'CEO', 'SUPER_ADMIN']);
 
 const Expenses = () => {
@@ -176,8 +118,8 @@ const Expenses = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [prefillSourceMeta, setPrefillSourceMeta] = useState(null);
   const [newExpense, setNewExpense] = useState({
-    expenseType: 'OPERATIONAL',
-    expenseCategory: 'FUEL',
+    expenseType: DEFAULT_EXPENSE_TYPE,
+    expenseCategory: COLLAPSED_EXPENSE_CATEGORIES[0],
     amount: '',
     requestedDate: new Date().toISOString().slice(0, 10),
     expenseDate: new Date().toISOString().slice(0, 10),
@@ -188,68 +130,47 @@ const Expenses = () => {
     receiptFile: null,
   });
 
-  const currentRole = String(user?.role || '').toUpperCase();
-  const requiresVehicleSelection = VEHICLE_RELATED_EXPENSE_CATEGORIES.has(newExpense.expenseCategory)
-    || currentRole === 'DRIVER'
-    || currentRole === 'CHIEF_DRIVER';
+  const normalizedRole = String(user?.role || '')
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, '')
+    .replace(/\s+/g, '_');
+  const currentRole = normalizedRole === 'SUPERADMIN' ? 'SUPER_ADMIN' : normalizedRole;
+  const isAdmin = currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN';
   const mustUseVehicleRelatedCategory = STRICT_VEHICLE_REQUEST_ROLES.has(currentRole);
-  const filteredExpenseTypeOptions = useMemo(() => {
-    if (!mustUseVehicleRelatedCategory) return EXPENSE_TYPE_OPTIONS;
-    return EXPENSE_TYPE_OPTIONS.filter((type) =>
-      (EXPENSE_CATEGORIES_BY_TYPE[type] || []).some((category) => VEHICLE_RELATED_EXPENSE_CATEGORIES.has(category))
-    );
-  }, [mustUseVehicleRelatedCategory]);
   const availableCategories = useMemo(() => {
-    const categoriesForType = EXPENSE_CATEGORIES_BY_TYPE[newExpense.expenseType] || ['OTHER'];
-    if (!mustUseVehicleRelatedCategory) return categoriesForType;
-    return categoriesForType.filter((category) => VEHICLE_RELATED_EXPENSE_CATEGORIES.has(category));
-  }, [mustUseVehicleRelatedCategory, newExpense.expenseType]);
+    if (!mustUseVehicleRelatedCategory) return COLLAPSED_EXPENSE_CATEGORIES;
+    return COLLAPSED_EXPENSE_CATEGORIES.filter((category) => VEHICLE_RELATED_EXPENSE_CATEGORIES.has(category));
+  }, [mustUseVehicleRelatedCategory]);
   const vehiclesForSelectedSubsidiary = useMemo(() => vehicles, [vehicles]);
-  const isExpenseApprover = EXPENSE_APPROVER_ROLES.has(String(user?.role || '').toUpperCase());
-  const canRequestExpense = EXPENSE_REQUESTER_ROLES.has(String(user?.role || '').toUpperCase());
+  const isExpenseApprover = EXPENSE_APPROVER_ROLES.has(currentRole);
+  const canRequestExpense = EXPENSE_REQUESTER_ROLES.has(currentRole);
   const canUploadCompletedExpenseReceipt = RECEIPT_UPLOAD_ALLOWED_ROLES.has(currentRole);
+  const canUseExpenseActions = EXPENSE_ACTION_ROLES.has(currentRole);
   const isApprovalPage = location.pathname.startsWith('/expenses/approvals');
+  const isExpenseRequestPage = location.pathname === '/expenses' || location.pathname === '/expenses/';
+  const showRequestExpenseButton = canUseExpenseActions && canRequestExpense && (isExpenseRequestPage || isAdmin);
+  const showExportButton = canUseExpenseActions && isExpenseRequestPage;
   const prefillAppliedRef = React.useRef('');
   const viewExpenseAppliedRef = React.useRef('');
   const isVehicleApprovalPrefill = !editingExpense && prefillSourceMeta?.source === 'vehicle-status-approval';
 
   useEffect(() => {
-    if (filteredExpenseTypeOptions.length === 0) return;
-
-    if (!filteredExpenseTypeOptions.includes(newExpense.expenseType)) {
-      const nextType = filteredExpenseTypeOptions[0];
-      const nextCategories = (EXPENSE_CATEGORIES_BY_TYPE[nextType] || ['OTHER'])
-        .filter((category) => !mustUseVehicleRelatedCategory || VEHICLE_RELATED_EXPENSE_CATEGORIES.has(category));
-
-      setNewExpense((prev) => ({
-        ...prev,
-        expenseType: nextType,
-        expenseCategory: nextCategories[0] || 'FUEL',
-      }));
-      return;
-    }
-
     if (availableCategories.length > 0 && !availableCategories.includes(newExpense.expenseCategory)) {
       setNewExpense((prev) => ({
         ...prev,
         expenseCategory: availableCategories[0],
       }));
     }
-  }, [
-    availableCategories,
-    filteredExpenseTypeOptions,
-    mustUseVehicleRelatedCategory,
-    newExpense.expenseCategory,
-    newExpense.expenseType,
-  ]);
+  }, [availableCategories, newExpense.expenseCategory]);
 
   const resetExpenseForm = () => {
     setEditingExpense(null);
     setModificationReason('');
     setPrefillSourceMeta(null);
     setNewExpense({
-      expenseType: 'OPERATIONAL',
-      expenseCategory: 'FUEL',
+      expenseType: DEFAULT_EXPENSE_TYPE,
+      expenseCategory: COLLAPSED_EXPENSE_CATEGORIES[0],
       amount: '',
       requestedDate: new Date().toISOString().slice(0, 10),
       expenseDate: new Date().toISOString().slice(0, 10),
@@ -439,7 +360,11 @@ const Expenses = () => {
   const fetchSubsidiaries = async () => {
     try {
       const response = await api.getSubsidiaries();
-      const raw = Array.isArray(response?.data) ? response.data : [];
+      const raw = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response)
+          ? response
+          : [];
       setSubsidiaries(
         [...raw].sort((a, b) => {
           const aIsMain = String(a?.code || '').toUpperCase() === MAIN_SUBSIDIARY_CODE;
@@ -496,8 +421,18 @@ const Expenses = () => {
     if (nextRoles.length === 0) return null;
 
     const roleSet = new Set(nextRoles);
+    if (
+      currentRole === 'CEO'
+      && expense?.createdById === user?.id
+      && roleSet.has('CEO')
+    ) {
+      return roleSet.has('SUPER_ADMIN')
+        ? 'Kindly approve your request (SUPER_ADMIN can also approve)'
+        : 'Kindly approve your request';
+    }
+
     if (roleSet.has('CEO') && roleSet.has('SUPER_ADMIN')) {
-      return 'CEO approval (SUPER_ADMIN approval stands in for CEO)';
+      return 'CEO approval';
     }
 
     return nextRoles
@@ -738,12 +673,6 @@ const Expenses = () => {
       return;
     }
 
-    if (requiresVehicleSelection && !newExpense.vehicleId) {
-      const message = 'Please select a car for this vehicle-related expense category.';
-      showToast(message, 'error');
-      return;
-    }
-
     if (mustUseVehicleRelatedCategory && !VEHICLE_RELATED_EXPENSE_CATEGORIES.has(newExpense.expenseCategory)) {
       showToast('Your role can only submit car-related expense categories.', 'error');
       return;
@@ -752,7 +681,7 @@ const Expenses = () => {
     setSubmitting(true);
     try {
       const payload = new FormData();
-      payload.append('expenseType', newExpense.expenseType);
+      payload.append('expenseType', DEFAULT_EXPENSE_TYPE);
       payload.append('expenseCategory', newExpense.expenseCategory);
       payload.append('amount', newExpense.amount);
       payload.append('requestedDate', newExpense.requestedDate);
@@ -919,8 +848,8 @@ const Expenses = () => {
     setModificationReason('');
     setPrefillSourceMeta(null);
     setNewExpense({
-      expenseType: expense.expenseType || 'OPERATIONAL',
-      expenseCategory: expense.expenseCategory || 'FUEL',
+      expenseType: expense.expenseType || DEFAULT_EXPENSE_TYPE,
+      expenseCategory: expense.expenseCategory || COLLAPSED_EXPENSE_CATEGORIES[0],
       amount: expense.amount || '',
       requestedDate: expense.recordedDate ? new Date(expense.recordedDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
       expenseDate: expense.expenseDate ? new Date(expense.expenseDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -1010,24 +939,36 @@ const Expenses = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-800">{isApprovalPage ? 'Expense Approvals' : 'Expenses'}</h1>
-        <div className="flex items-center space-x-3">
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </button>
-          {!isApprovalPage && canRequestExpense && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Request Expense
-            </button>
-          )}
-        </div>
+        <div className="hidden sm:block" />
       </div>
+
+      {(showExportButton || showRequestExpenseButton) && (
+        <div className="rounded-xl border border-red-100 bg-white p-3 shadow-sm">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+            {showExportButton && (
+              <button
+                type="button"
+                className="flex items-center justify-center rounded-lg border border-slate-900 bg-slate-800 px-4 py-2 text-white shadow-sm hover:bg-slate-900"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </button>
+            )}
+            {showRequestExpenseButton && (
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center justify-center rounded-lg border border-red-700 bg-red-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-red-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Request Expense
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {isApprovalPage && isExpenseApprover && (
         <section className={`rounded-lg p-6 shadow ${mode === 'dark' ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
@@ -1620,9 +1561,10 @@ const Expenses = () => {
       </div>
 
       {showViewModal && viewExpense && (
-        <div className="fixed inset-0 z-[62] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-[62] overflow-y-auto bg-black/50 p-2 sm:p-4">
+          <div className="mx-auto my-2 w-full max-w-2xl sm:my-6">
+            <div className="max-h-[calc(100vh-1rem)] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+            <div className="sticky top-0 z-10 -mx-6 mb-4 flex items-center justify-between border-b bg-white px-6 pb-3 pt-1">
               <h3 className="text-lg font-semibold text-gray-900">View Expense</h3>
               <button
                 type="button"
@@ -1724,17 +1666,20 @@ const Expenses = () => {
               )}
             </div>
 
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setViewExpense(null);
-                }}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Close
-              </button>
+            <div className="sticky bottom-0 -mx-6 mt-6 border-t bg-white px-6 pt-4">
+              <div className="flex justify-end pb-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowViewModal(false);
+                    setViewExpense(null);
+                  }}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -1783,9 +1728,10 @@ const Expenses = () => {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4">
-          <div className="w-full max-w-full sm:max-w-lg md:max-w-2xl rounded-xl bg-white shadow-2xl overflow-y-auto max-h-screen">
-            <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-2 sm:p-4">
+          <div className="mx-auto my-2 w-full max-w-full sm:my-6 sm:max-w-lg md:max-w-2xl">
+            <div className="max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto rounded-xl bg-white shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-800">{editingExpense ? 'Edit Expense' : 'Request Expense'}</h2>
                 {!editingExpense && prefillSourceMeta?.source === 'vehicle-status-approval' ? (
@@ -1806,31 +1752,8 @@ const Expenses = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddExpense} className="space-y-4 px-4 sm:px-6 py-5">
+            <form onSubmit={handleAddExpense} className="space-y-4 px-4 py-5 sm:px-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="text-sm text-gray-700">
-                  Expense Type
-                  <select
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
-                    value={newExpense.expenseType}
-                    onChange={(e) => {
-                      const nextType = e.target.value;
-                      const nextCategoryOptions = (EXPENSE_CATEGORIES_BY_TYPE[nextType] || ['OTHER'])
-                        .filter((category) => !mustUseVehicleRelatedCategory || VEHICLE_RELATED_EXPENSE_CATEGORIES.has(category));
-                      const nextCategory = nextCategoryOptions[0] || 'FUEL';
-                      setNewExpense((prev) => ({
-                        ...prev,
-                        expenseType: nextType,
-                        expenseCategory: nextCategory,
-                      }));
-                    }}
-                  >
-                    {filteredExpenseTypeOptions.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </label>
-
                 <label className="text-sm text-gray-700">
                   Expense Category
                   <select
@@ -1840,7 +1763,7 @@ const Expenses = () => {
                     required
                   >
                     {availableCategories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
+                      <option key={category} value={category}>{formatExpenseOptionLabel(category)}</option>
                     ))}
                   </select>
                 </label>
@@ -1903,61 +1826,48 @@ const Expenses = () => {
                   </select>
                 </label>
 
-                {requiresVehicleSelection && (
-                  <div className="text-sm text-gray-700 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <span>Car Number</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-red-600 hover:text-red-700"
-                          onClick={() => fetchVehiclesForSelection(newExpense.subsidiaryId)}
-                          disabled={!newExpense.subsidiaryId || isVehicleApprovalPrefill}
-                        >
-                          Refresh list
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-red-600 hover:text-red-700"
-                          onClick={() => {
-                            window.open('/vehicles/new', '_blank', 'noopener,noreferrer');
-                          }}
-                        >
-                          Add Car
-                        </button>
-                      </div>
+                <div className="text-sm text-gray-700 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <span>Car Number (optional)</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-red-600 hover:text-red-700"
+                        onClick={() => fetchVehiclesForSelection(newExpense.subsidiaryId)}
+                        disabled={!newExpense.subsidiaryId || isVehicleApprovalPrefill}
+                      >
+                        Refresh list
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          window.open('/vehicles/new', '_blank', 'noopener,noreferrer');
+                        }}
+                      >
+                        Add Car
+                      </button>
                     </div>
-                    <select
-                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
-                      value={newExpense.vehicleId}
-                      onChange={(e) => setNewExpense((prev) => ({ ...prev, vehicleId: e.target.value }))}
-                      disabled={!newExpense.subsidiaryId || isVehicleApprovalPrefill}
-                      required
-                    >
-                      <option value="">{newExpense.subsidiaryId ? 'Select car number' : 'Select subsidiary first'}</option>
-                      {vehiclesForSelectedSubsidiary.map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.registrationNumber} {vehicle.model ? `- ${vehicle.model}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    {!newExpense.subsidiaryId && (
-                      <p className="mt-1 text-xs text-amber-700">
-                        Select subsidiary first, then choose a car from that subsidiary.
-                      </p>
-                    )}
-                    {isVehicleApprovalPrefill ? (
-                      <p className="mt-1 text-xs text-emerald-700">
-                        Car number and subsidiary are locked from the approved vehicle request to avoid mistakes.
-                      </p>
-                    ) : null}
-                    {newExpense.subsidiaryId && vehiclesForSelectedSubsidiary.length === 0 && (
-                      <p className="mt-1 text-xs text-amber-700">
-                        No active cars found for this subsidiary. Click Add Car to register a vehicle, then Refresh list.
-                      </p>
-                    )}
                   </div>
-                )}
+                  <select
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    value={newExpense.vehicleId}
+                    onChange={(e) => setNewExpense((prev) => ({ ...prev, vehicleId: e.target.value }))}
+                    disabled={!newExpense.subsidiaryId || isVehicleApprovalPrefill}
+                  >
+                    <option value="">{newExpense.subsidiaryId ? 'Select car number' : 'Select subsidiary first'}</option>
+                    {vehiclesForSelectedSubsidiary.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.licensePlate || vehicle.registrationNumber || vehicle.vehicleNumber || 'Unnamed vehicle'}
+                      </option>
+                    ))}
+                  </select>
+                  {newExpense.subsidiaryId && vehiclesForSelectedSubsidiary.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      No active cars found for this subsidiary. Click Add Car to register a vehicle, then Refresh list.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {editingExpense?.approvalStatus === 'APPROVED' && (
@@ -2007,7 +1917,8 @@ const Expenses = () => {
                 <p className="mt-1 text-xs text-gray-500">For transparency, attach receipt when available.</p>
               </label>
 
-              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 border-t pt-4">
+              <div className="sticky bottom-0 -mx-4 border-t bg-white px-4 pt-4 sm:-mx-6 sm:px-6">
+                <div className="flex flex-col-reverse justify-end gap-3 pb-1 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => {
@@ -2025,8 +1936,10 @@ const Expenses = () => {
                 >
                   {submitting ? (editingExpense ? 'Saving...' : 'Submitting...') : (editingExpense ? (editingExpense.approvalStatus === 'APPROVED' ? 'Submit Edit Request' : 'Save Changes') : 'Request Expense')}
                 </button>
+                </div>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
