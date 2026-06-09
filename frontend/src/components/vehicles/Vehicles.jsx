@@ -665,7 +665,7 @@ const Vehicles = () => {
                     const expenseStageLabel = getExpenseStageLabel(req.expense);
                     return (
                       <tr key={req.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-mono font-medium text-gray-800">{req.vehicle?.registrationNumber}</td>
+                        <td className={`px-4 py-3 font-mono font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-800'}`}>{req.vehicle?.registrationNumber}</td>
                         <td className="px-4 py-3 text-gray-700">{req.requester?.fullName}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${req.targetStatus === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
@@ -872,7 +872,7 @@ const Vehicles = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                      <span className={`text-sm font-mono px-2 py-1 rounded ${mode === 'dark' ? 'bg-slate-700 text-slate-200' : 'bg-gray-100 text-gray-900'}`}>
                         {vehicle.registrationNumber}
                       </span>
                     </td>
