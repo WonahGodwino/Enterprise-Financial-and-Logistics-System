@@ -39,6 +39,7 @@ const AuditLogs = lazy(() => import('./components/admin/AuditLogs'));
 const TransactionLog = lazy(() => import('./components/admin/TransactionLog'));
 const BackupRestore = lazy(() => import('./components/admin/BackupRestore'));
 const ApiSettings = lazy(() => import('./components/admin/ApiSettings'));
+const AssetTypes = lazy(() => import('./components/admin/AssetTypes'));
 
 const AuthenticatedIndexRedirect = () => {
   const { user } = useAuth();
@@ -233,6 +234,11 @@ function App() {
                       />
                       <Route path="backups" element={<BackupRestore />} />
                       <Route path="api-settings" element={<ApiSettings />} />
+                      <Route path="asset-types" element={
+                        <PrivateRoute requiredRoles={['ADMIN', 'CEO', 'SUPER_ADMIN']}>
+                          <AssetTypes />
+                        </PrivateRoute>
+                      } />
                     </Route>
                     
                     {/* Documentation & Help */}

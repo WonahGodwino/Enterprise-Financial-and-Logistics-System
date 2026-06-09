@@ -46,12 +46,28 @@ model Subsidiary {
   @@index([isActive])
 }
 
+model VehicleAssetType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdById String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy User   @relation("VehicleAssetTypeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  vehicles  Vehicle[]
+
+  @@index([name])
+  @@index([isActive])
+}
+
 model Vehicle {
   id                String    @id @default(cuid())
   subsidiaryId      String
   registrationNumber String   @unique
   model             String
-  assetType         AssetType
+  assetType         String    @default("OTHER")
+  assetTypeId       String?
   initialOdometer   Int?
   status            VehicleStatus @default(ACTIVE)
   createdAt         DateTime  @default(now())
@@ -65,6 +81,7 @@ model Vehicle {
   statusRequests    VehicleStatusRequest[]
   logs              VehicleLog[]
   vehicleSubsidiaries VehicleSubsidiary[]
+  assetTypeRef      VehicleAssetType?  @relation(fields: [assetTypeId], references: [id], onDelete: SetNull)
   
   @@index([subsidiaryId])
   @@index([status])
@@ -518,7 +535,8 @@ model User {
   requestedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestBy")
   chiefReviewedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestChiefDecisionBy")
   finalReviewedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestFinalDecisionBy")
-  
+  createdAssetTypes VehicleAssetType[]    @relation("VehicleAssetTypeCreator")
+
   @@index([employeeId])
   @@index([managerId])
   @@index([department])

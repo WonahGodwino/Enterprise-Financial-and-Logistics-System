@@ -271,6 +271,22 @@ class ApiService {
     return response.data;
   }
 
+  // Asset Types (Vehicle)
+  async getAssetTypes(params) {
+    const response = await this.api.get('/asset-types', { params });
+    return response.data;
+  }
+
+  async createAssetType(data) {
+    const response = await this.api.post('/asset-types', data);
+    return response.data;
+  }
+
+  async updateAssetType(id, data) {
+    const response = await this.api.put(`/asset-types/${id}`, data);
+    return response.data;
+  }
+
   async requestVehicleStatusChange(vehicleId, data) {
     const response = await this.api.post(`/vehicles/${vehicleId}/status-request`, data);
     return response.data;
@@ -367,6 +383,16 @@ class ApiService {
 
   async getIncomes(params) {
     const response = await this.api.get('/income', { params });
+    return response.data;
+  }
+
+  async getIncomeById(id) {
+    const response = await this.api.get(`/income/${id}`);
+    return response.data;
+  }
+
+  async recordIncomePayment(id, data) {
+    const response = await this.api.post(`/income/${id}/pay`, data);
     return response.data;
   }
 

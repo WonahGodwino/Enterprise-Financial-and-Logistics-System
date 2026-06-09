@@ -765,6 +765,71 @@ router.post('/vehicles', authorize(['CHIEF_DRIVER', 'CEO', 'SUPER_ADMIN']), oper
 router.get('/vehicles', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN']), operationController.getVehicles);
 router.get('/operations/analytics', authorize(['ADMIN', 'CEO','SUPER_ADMIN']), operationController.getAnalytics);
 
+// Vehicle Asset Type routes (manageable by CEO, SUPER_ADMIN, ADMIN)
+router.get('/asset-types', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'CEO', 'SUPER_ADMIN']), asyncHandler(async (req, res) => {
+  const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
+  const where = includeInactive ? {} : { isActive: true };
+  const types = await prisma.vehicleAssetType.findMany({
+    where,
+    select: { id: true, name: true, isActive: true, createdAt: true },
+    orderBy: { name: 'asc' },
+  });
+  res.json({ success: true, data: types });
+}));
+
+router.post('/asset-types', authorize(['ADMIN', 'CEO', 'SUPER_ADMIN']), asyncHandler(async (req, res) => {
+  const { name } = req.body || {};
+  const trimmedName = String(name || '').trim();
+  if (!trimmedName) {
+    return res.status(400).json({ success: false, message: 'Asset type name is required' });
+  }
+  const existing = await prisma.vehicleAssetType.findFirst({
+    where: { name: { equals: trimmedName, mode: 'insensitive' } },
+    select: { id: true },
+  });
+  if (existing) {
+    return res.status(409).json({ success: false, message: 'Asset type already exists' });
+  }
+  const assetType = await prisma.vehicleAssetType.create({
+    data: { name: trimmedName, createdById: req.user.id },
+    select: { id: true, name: true, isActive: true, createdAt: true },
+  });
+  res.status(201).json({ success: true, data: assetType, message: 'Asset type created' });
+}));
+
+router.put('/asset-types/:id', authorize(['ADMIN', 'CEO', 'SUPER_ADMIN']), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, isActive } = req.body || {};
+  const existing = await prisma.vehicleAssetType.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) {
+    return res.status(404).json({ success: false, message: 'Asset type not found' });
+  }
+  const data = {};
+  if (name !== undefined) {
+    const trimmedName = String(name).trim();
+    if (!trimmedName) {
+      return res.status(400).json({ success: false, message: 'Asset type name cannot be empty' });
+    }
+    const duplicate = await prisma.vehicleAssetType.findFirst({
+      where: { name: { equals: trimmedName, mode: 'insensitive' }, id: { not: id } },
+      select: { id: true },
+    });
+    if (duplicate) {
+      return res.status(409).json({ success: false, message: 'Asset type name already exists' });
+    }
+    data.name = trimmedName;
+  }
+  if (isActive !== undefined) {
+    data.isActive = Boolean(isActive);
+  }
+  const updated = await prisma.vehicleAssetType.update({
+    where: { id },
+    data,
+    select: { id: true, name: true, isActive: true, createdAt: true, updatedAt: true },
+  });
+  res.json({ success: true, data: updated, message: 'Asset type updated' });
+}));
+
 // Income routes
 router.post('/income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.recordIncome);
 router.get('/income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.getIncomes);
@@ -778,6 +843,7 @@ router.get('/income/:id', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN'
 router.get('/income/:id/invoice', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'MANAGER', 'SUPER_ADMIN']), incomeController.getIncomeInvoice);
 router.put('/income/:id', authorize(['ADMIN', 'MANAGER', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN']), incomeController.updateIncome);
 router.post('/income/:id/mark-paid', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.markAsPaid);
+router.post('/income/:id/pay', authorize(['ADMIN', 'CEO', 'SUPER_ADMIN']), incomeController.recordPayment);
 router.delete('/income/:id', authorize(['ADMIN','CEO','SUPER_ADMIN']), incomeController.deleteIncome);
 
 // Customer routes (for income source selection and finance reporting)

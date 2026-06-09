@@ -813,6 +813,117 @@ export class IncomeController {
     });
   });
 
+  recordPayment = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { amount, paymentMethod, paymentDate, reference, notes } = req.body;
+
+    const paymentAmount = this.toNumber(amount);
+    if (!paymentAmount || paymentAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid payment amount is required' });
+    }
+
+    const income = await prisma.incomeRecord.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        subsidiary: true,
+        payments: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+
+    if (!income) {
+      return res.status(404).json({ success: false, message: 'Income record not found' });
+    }
+
+    // Calculate current total
+    const incomeItems = Array.isArray(income.incomeItems) ? income.incomeItems : [];
+    const totalCost = incomeItems.reduce((sum, item) => sum + (Number(item.amount) || Number(item.cost) || 0), 0);
+    const totalTax = incomeItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0), 0);
+    const totalDue = totalCost + totalTax + (Number(income.amount) || 0);
+    const existingPaid = income.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + (Number(income.paidAmount) || 0);
+    const balanceBefore = Math.max(0, totalDue - existingPaid);
+
+    if (paymentAmount > balanceBefore + 0.01) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment amount (${paymentAmount.toLocaleString()}) exceeds outstanding balance (${balanceBefore.toLocaleString()})`,
+      });
+    }
+
+    const newTotalPaid = existingPaid + paymentAmount;
+    const newBalance = Math.max(0, totalDue - newTotalPaid);
+    const isFullyPaid = newBalance < 0.01;
+
+    // Create payment record
+    const paymentNumber = `PAY-INV-${Date.now()}`;
+    const payment = await prisma.payment.create({
+      data: {
+        paymentNumber,
+        paymentType: 'INVOICE_PAYMENT',
+        paymentMethod: paymentMethod || 'BANK_TRANSFER',
+        amount: paymentAmount,
+        paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+        customerId: income.customerId || 'unknown',
+        incomeRecordId: id,
+        invoiceId: income.invoiceId || undefined,
+        reference: reference || null,
+        notes: notes || `Payment received for income record ${id}`,
+        receivedById: req.user.id,
+      },
+    });
+
+    // Update income record payment status
+    const updatedIncome = await prisma.incomeRecord.update({
+      where: { id },
+      data: {
+        paidAmount: newTotalPaid,
+        paymentStatus: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+        paidDate: isFullyPaid ? (paymentDate ? new Date(paymentDate) : new Date()) : income.paidDate,
+        updatedAt: new Date(),
+      },
+      include: {
+        customer: true,
+        subsidiary: true,
+        createdBy: { select: { id: true, fullName: true, email: true } },
+        payments: {
+          orderBy: { createdAt: 'desc' },
+          include: { receivedBy: { select: { id: true, fullName: true } } },
+        },
+        invoice: true,
+      },
+    });
+
+    // Update invoice if exists
+    if (income.invoiceId) {
+      const inv = await prisma.invoice.findUnique({ where: { id: income.invoiceId }, select: { totalAmount: true } });
+      if (inv) {
+        const totalInvoicePaid = updatedIncome.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + (Number(income.paidAmount) || 0);
+        await prisma.invoice.update({
+          where: { id: income.invoiceId },
+          data: {
+            amountPaid: totalInvoicePaid,
+            balanceDue: Math.max(0, Number(inv.totalAmount || 0) - totalInvoicePaid),
+            status: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+            paidDate: isFullyPaid ? (paymentDate ? new Date(paymentDate) : new Date()) : undefined,
+          },
+        });
+      }
+    }
+
+    await invalidateDashboardDrilldownCache();
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedIncome,
+        paymentRecord: payment,
+      },
+      message: isFullyPaid
+        ? `Payment of ${paymentAmount.toLocaleString()} received. Income is now fully paid.`
+        : `Payment of ${paymentAmount.toLocaleString()} received. Remaining balance: ${newBalance.toLocaleString()}.`,
+    });
+  });
+
   getOutstandingInvoices = asyncHandler(async (req, res) => {
     const outstanding = await this.incomeService.incomeRepository.getOutstandingInvoices();
 

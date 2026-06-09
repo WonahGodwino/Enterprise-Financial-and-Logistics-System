@@ -22,6 +22,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const VEHICLE_ASSIGNER_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
 const DRIVER_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER']);
@@ -35,6 +36,7 @@ const STAFF_ROLE_OPTIONS = [
 const Vehicles = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { mode } = useTheme();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,6 +45,7 @@ const Vehicles = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loadingSubsidiaries, setLoadingSubsidiaries] = useState(false);
   const [subsidiaries, setSubsidiaries] = useState([]);
+  const [assetTypes, setAssetTypes] = useState([]);
   const [error, setError] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigningVehicle, setAssigningVehicle] = useState(false);
@@ -146,6 +149,7 @@ const Vehicles = () => {
 
   useEffect(() => {
     fetchVehicles();
+    fetchAssetTypes();
   }, []);
 
   const fetchVehicles = async () => {
@@ -170,6 +174,15 @@ const Vehicles = () => {
       initialOdometer: '',
       subsidiaryIds: [],
     });
+  };
+
+  const fetchAssetTypes = async () => {
+    try {
+      const response = await api.getAssetTypes();
+      setAssetTypes(response?.data || []);
+    } catch (err) {
+      console.error('Error fetching asset types:', err);
+    }
   };
 
   const fetchSubsidiaries = async () => {
@@ -954,13 +967,13 @@ const Vehicles = () => {
 
       {showAddModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-lg bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">Register Vehicle</h2>
+          <div className={`w-full max-w-xl rounded-lg shadow-xl ${mode === 'dark' ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
+            <div className={`flex items-center justify-between border-b px-6 py-4 ${mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}`}>
+              <h2 className={`text-lg font-semibold ${mode === 'dark' ? 'text-white' : 'text-gray-900'}`}>Register Vehicle</h2>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                className={`rounded p-1 ${mode === 'dark' ? 'text-slate-300 hover:bg-slate-700 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -970,53 +983,59 @@ const Vehicles = () => {
             <form onSubmit={handleRegisterVehicle} className="space-y-4 px-6 py-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Registration Number</label>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Registration Number</label>
                   <input
                     type="text"
                     value={form.registrationNumber}
                     onChange={(e) => setForm((prev) => ({ ...prev, registrationNumber: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
                     placeholder="ABC-123XY"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Model</label>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Model</label>
                   <input
                     type="text"
                     value={form.model}
                     onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
                     placeholder="Toyota Corolla"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Asset Type</label>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Asset Type</label>
                   <select
                     value={form.assetType}
                     onChange={(e) => setForm((prev) => ({ ...prev, assetType: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
                   >
-                    <option value="SIENNA">SIENNA</option>
-                    <option value="COROLLA">COROLLA</option>
-                    <option value="OTHER">OTHER</option>
+                    {assetTypes.length > 0 ? assetTypes.map((at) => (
+                      <option key={at.id} value={at.name}>{at.name}</option>
+                    )) : (
+                      <>
+                        <option value="SIENNA">SIENNA</option>
+                        <option value="COROLLA">COROLLA</option>
+                        <option value="OTHER">OTHER</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Subsidiaries (Units)</label>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Subsidiaries (Units)</label>
                   {loadingSubsidiaries ? (
-                    <p className="text-sm text-gray-500">Loading subsidiaries...</p>
+                    <p className={`text-sm ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>Loading subsidiaries...</p>
                   ) : subsidiaries.length === 0 ? null : (
-                    <div className="max-h-36 overflow-y-auto rounded-lg border border-gray-300 px-3 py-2 space-y-1">
+                    <div className={`max-h-36 overflow-y-auto rounded-lg border px-3 py-2 space-y-1 ${mode === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-gray-300'}`}>
                       {subsidiaries.map((subsidiary) => (
                         <label key={subsidiary.id} className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            className={`h-4 w-4 rounded text-red-600 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-500 bg-slate-600' : 'border-gray-300'}`}
                             checked={form.subsidiaryIds.includes(subsidiary.id)}
                             onChange={(e) => {
                               setForm((prev) => ({
@@ -1027,7 +1046,7 @@ const Vehicles = () => {
                               }));
                             }}
                           />
-                          <span className="text-sm text-gray-700">{subsidiary.name} ({subsidiary.code})</span>
+                          <span className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>{subsidiary.name} ({subsidiary.code})</span>
                         </label>
                       ))}
                     </div>
@@ -1035,14 +1054,14 @@ const Vehicles = () => {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Initial Odometer (optional)</label>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Initial Odometer (optional)</label>
                   <input
                     type="number"
                     min="0"
                     step="1"
                     value={form.initialOdometer}
                     onChange={(e) => setForm((prev) => ({ ...prev, initialOdometer: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
                     placeholder="0"
                   />
                 </div>
@@ -1066,14 +1085,14 @@ const Vehicles = () => {
               ) : null}
 
               {error ? (
-                <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+                <p className={`rounded-md px-3 py-2 text-sm ${mode === 'dark' ? 'bg-red-900/60 text-red-200' : 'bg-red-50 text-red-700'}`}>{error}</p>
               ) : null}
 
               <div className="flex items-center justify-end gap-3 pt-1">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  className={`rounded-lg border px-4 py-2 ${mode === 'dark' ? 'border-slate-600 text-slate-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                 >
                   Cancel
                 </button>

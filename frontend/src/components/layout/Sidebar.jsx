@@ -103,7 +103,7 @@ const Sidebar = ({ open: openProp, onClose, variant = 'permanent' }) => {
       ]
     : [
         { text: 'Expenses', path: '/expenses', icon: Wallet },
-        { text: 'Expense Approvals', path: '/expenses/approvals', icon: BadgeCheck, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN'] },
+        { text: 'Expense Approvals', path: '/expenses/approvals', icon: BadgeCheck, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN', 'CHIEF_DRIVER'] },
         { text: 'Income Entry', path: '/income', icon: TrendingUp, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN', 'ACCOUNTANT'] },
         { text: 'My Income Modification Request', path: '/income/my-requests', icon: GitCompareArrows, roles: ['ADMIN', 'MANAGER'] },
         { text: 'Profit', path: '/profit', icon: TrendingUp, roles: ['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN'] },
@@ -262,6 +262,17 @@ const Sidebar = ({ open: openProp, onClose, variant = 'permanent' }) => {
 
                   {companySetupOpen && (
                     <div className={`mt-1 ml-4 space-y-1 border-l pl-3 ${mode === 'dark' ? 'border-slate-700' : 'border-amber-200'}`}>
+                      <button
+                        onClick={() => handleNavigation('/admin/asset-types')}
+                        className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                          isActive('/admin/asset-types')
+                            ? (mode === 'dark' ? 'bg-slate-700 text-red-300 font-semibold' : 'bg-red-50 text-red-700 font-semibold')
+                            : (mode === 'dark' ? 'text-slate-200 hover:bg-slate-700/70' : 'text-gray-700 hover:bg-amber-100')
+                        }`}
+                      >
+                        <CarFront className={`h-4 w-4 ${isActive('/admin/asset-types') ? 'text-red-500' : (mode === 'dark' ? 'text-slate-400' : 'text-gray-500')}`} />
+                        <span>Setup Car Model</span>
+                      </button>
                       <button
                         onClick={() => handleNavigation('/company-setup/main-company')}
                         className={`w-full text-left flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${

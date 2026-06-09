@@ -149,7 +149,7 @@ const Expenses = () => {
   const canUseExpenseActions = EXPENSE_ACTION_ROLES.has(currentRole);
   const isApprovalPage = location.pathname.startsWith('/expenses/approvals');
   const isExpenseRequestPage = location.pathname === '/expenses' || location.pathname === '/expenses/';
-  const showRequestExpenseButton = canUseExpenseActions && canRequestExpense && (isExpenseRequestPage || isAdmin);
+  const showRequestExpenseButton = canRequestExpense && (isExpenseRequestPage || isAdmin);
   const showExportButton = canUseExpenseActions && isExpenseRequestPage;
   const prefillAppliedRef = React.useRef('');
   const viewExpenseAppliedRef = React.useRef('');
@@ -190,13 +190,26 @@ const Expenses = () => {
 
   const fetchVehiclesForSelection = useCallback(async (subsidiaryId) => {
     try {
-      const response = await api.getVehicles({ subsidiaryId });
+      const response = await api.getVehicles({ subsidiaryId, includeInactive: false });
       const data = Array.isArray(response?.data) ? response.data : [];
-      setVehicles(data);
+      // For DRIVER role, filter to only assigned vehicles and auto-select
+      if (currentRole === 'DRIVER') {
+        const assignedVehicles = data.filter((v) => v.assignment?.staff?.id === user?.id);
+        setVehicles(assignedVehicles);
+        // Auto-select the driver's assigned vehicle if not already selected
+        if (assignedVehicles.length > 0) {
+          setNewExpense((prev) => ({
+            ...prev,
+            vehicleId: prev.vehicleId && assignedVehicles.some((v) => v.id === prev.vehicleId) ? prev.vehicleId : assignedVehicles[0].id,
+          }));
+        }
+      } else {
+        setVehicles(data);
+      }
     } catch (error) {
       console.error('Error fetching vehicles for expense form:', error);
     }
-  }, []);
+  }, [currentRole, user?.id]);
 
   useEffect(() => {
     fetchExpenses();
@@ -1730,10 +1743,10 @@ const Expenses = () => {
       {showAddModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-2 sm:p-4">
           <div className="mx-auto my-2 w-full max-w-full sm:my-6 sm:max-w-lg md:max-w-2xl">
-            <div className="max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto rounded-xl bg-white shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4">
+            <div className={`max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto rounded-xl shadow-2xl ${mode === 'dark' ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
+            <div className={`sticky top-0 z-10 flex items-center justify-between border-b px-6 py-4 ${mode === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
               <div>
-                <h2 className="text-lg font-semibold text-gray-800">{editingExpense ? 'Edit Expense' : 'Request Expense'}</h2>
+                <h2 className={`text-lg font-semibold ${mode === 'dark' ? 'text-white' : 'text-gray-800'}`}>{editingExpense ? 'Edit Expense' : 'Request Expense'}</h2>
                 {!editingExpense && prefillSourceMeta?.source === 'vehicle-status-approval' ? (
                   <p className="mt-1 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
                     From Vehicle Approval Request{prefillSourceMeta.requestId ? ` #${prefillSourceMeta.requestId}` : ''}
@@ -1746,7 +1759,7 @@ const Expenses = () => {
                   setShowAddModal(false);
                   resetExpenseForm();
                 }}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                className={`rounded p-1 ${mode === 'dark' ? 'text-slate-300 hover:bg-slate-700 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1754,10 +1767,10 @@ const Expenses = () => {
 
             <form onSubmit={handleAddExpense} className="space-y-4 px-4 py-5 sm:px-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="text-sm text-gray-700">
+                <label className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Expense Category
                   <select
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
                     value={newExpense.expenseCategory}
                     onChange={(e) => setNewExpense((prev) => ({ ...prev, expenseCategory: e.target.value }))}
                     required
@@ -1768,10 +1781,10 @@ const Expenses = () => {
                   </select>
                 </label>
 
-                <label className="text-sm text-gray-700">
+                <label className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Amount
                   <input
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
                     type="number"
                     min="0"
                     step="0.01"
@@ -1781,10 +1794,10 @@ const Expenses = () => {
                   />
                 </label>
 
-                <label className="text-sm text-gray-700">
+                <label className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Date Requested
                   <input
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
                     type="date"
                     value={newExpense.requestedDate}
                     onChange={(e) => setNewExpense((prev) => ({ ...prev, requestedDate: e.target.value }))}
@@ -1792,10 +1805,10 @@ const Expenses = () => {
                   />
                 </label>
 
-                <label className="text-sm text-gray-700">
+                <label className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Date of Expense
                   <input
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
                     type="date"
                     value={newExpense.expenseDate}
                     onChange={(e) => setNewExpense((prev) => ({ ...prev, expenseDate: e.target.value }))}
@@ -1803,10 +1816,10 @@ const Expenses = () => {
                   />
                 </label>
 
-                <label className="text-sm text-gray-700 md:col-span-2">
+                <label className={`text-sm md:col-span-2 ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Subsidiary *
                   <select
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
                     value={newExpense.subsidiaryId}
                     onChange={(e) => {
                       const nextSubsidiaryId = e.target.value;
@@ -1826,9 +1839,9 @@ const Expenses = () => {
                   </select>
                 </label>
 
-                <div className="text-sm text-gray-700 md:col-span-2">
+                <div className={`text-sm md:col-span-2 ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   <div className="flex items-center justify-between">
-                    <span>Car Number (optional)</span>
+                    <span>Car Number {currentRole !== 'DRIVER' ? '(optional)' : ''}</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -1850,7 +1863,7 @@ const Expenses = () => {
                     </div>
                   </div>
                   <select
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
                     value={newExpense.vehicleId}
                     onChange={(e) => setNewExpense((prev) => ({ ...prev, vehicleId: e.target.value }))}
                     disabled={!newExpense.subsidiaryId || isVehicleApprovalPrefill}
@@ -1863,7 +1876,7 @@ const Expenses = () => {
                     ))}
                   </select>
                   {newExpense.subsidiaryId && vehiclesForSelectedSubsidiary.length === 0 && (
-                    <p className="mt-1 text-xs text-amber-700">
+                    <p className={`mt-1 text-xs ${mode === 'dark' ? 'text-amber-300' : 'text-amber-700'}`}>
                       No active cars found for this subsidiary. Click Add Car to register a vehicle, then Refresh list.
                     </p>
                   )}
@@ -1871,34 +1884,34 @@ const Expenses = () => {
               </div>
 
               {editingExpense?.approvalStatus === 'APPROVED' && (
-                <label className="block text-sm text-gray-700">
+                <label className={`block text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Modification Reason
                   <textarea
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
                     rows={2}
                     value={modificationReason}
                     onChange={(e) => setModificationReason(e.target.value)}
                     placeholder="State why this approved expense needs to be edited"
                     required
                   />
-                  <p className="mt-1 text-xs text-amber-700">Approved expense changes will be submitted to CEO/SUPER_ADMIN for approval.</p>
+                  <p className={`mt-1 text-xs ${mode === 'dark' ? 'text-amber-300' : 'text-amber-700'}`}>Approved expense changes will be submitted to CEO/SUPER_ADMIN for approval.</p>
                 </label>
               )}
 
-              <label className="block text-sm text-gray-700">
+              <label className={`block text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                 Description
                 <input
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
                   value={newExpense.description}
                   onChange={(e) => setNewExpense((prev) => ({ ...prev, description: e.target.value }))}
                   placeholder="What was this expense for?"
                 />
               </label>
 
-              <label className="block text-sm text-gray-700">
+              <label className={`block text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                 Details
                 <textarea
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
                   rows={3}
                   value={newExpense.details}
                   onChange={(e) => setNewExpense((prev) => ({ ...prev, details: e.target.value }))}
@@ -1906,18 +1919,18 @@ const Expenses = () => {
                 />
               </label>
 
-              <label className="block text-sm text-gray-700">
+              <label className={`block text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                 Receipt Upload (optional)
                 <input
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white file:bg-slate-600 file:text-slate-200 file:border-0 file:rounded file:px-2 file:py-1 file:mr-2' : 'border-gray-300 text-gray-900'}`}
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={(e) => setNewExpense((prev) => ({ ...prev, receiptFile: e.target.files?.[0] || null }))}
                 />
-                <p className="mt-1 text-xs text-gray-500">For transparency, attach receipt when available.</p>
+                <p className={`mt-1 text-xs ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>For transparency, attach receipt when available.</p>
               </label>
 
-              <div className="sticky bottom-0 -mx-4 border-t bg-white px-4 pt-4 sm:-mx-6 sm:px-6">
+              <div className={`sticky bottom-0 -mx-4 border-t px-4 pt-4 sm:-mx-6 sm:px-6 ${mode === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
                 <div className="flex flex-col-reverse justify-end gap-3 pb-1 sm:flex-row">
                 <button
                   type="button"
@@ -1925,7 +1938,7 @@ const Expenses = () => {
                     setShowAddModal(false);
                     resetExpenseForm();
                   }}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className={`rounded-lg border px-4 py-2 text-sm ${mode === 'dark' ? 'border-slate-600 text-slate-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                 >
                   Cancel
                 </button>

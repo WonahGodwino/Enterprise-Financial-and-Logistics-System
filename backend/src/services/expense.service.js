@@ -115,9 +115,9 @@ export class ExpenseService {
       return ['CEO'];
     }
 
-    // Driver submissions end at SUPER_ADMIN (no CEO required)
+    // Driver submissions: CHIEF_DRIVER → ADMIN → CEO (with SUPER_ADMIN fallback at CEO stage)
     if (normalizedRole === 'DRIVER' && chiefRecipientIds.length > 0) {
-      return ['CHIEF_DRIVER', 'ADMIN', 'SUPER_ADMIN'];
+      return ['CHIEF_DRIVER', 'ADMIN', 'CEO'];
     }
 
     // All other roles stay with full chain
@@ -126,9 +126,14 @@ export class ExpenseService {
   }
 
   buildParallelRolesByStage({ requesterRole, expenseCategory }) {
+    const normalizedRole = this.normalizeRole(requesterRole);
     // CEO submissions keep CEO as primary approver while allowing SUPER_ADMIN to stand in.
-    if (this.normalizeRole(requesterRole) === 'CEO') {
+    if (normalizedRole === 'CEO') {
       return { 0: EXECUTIVE_STAGE_ROLES };
+    }
+    // Driver workflow: at the final CEO stage (index 2 after CHIEF_DRIVER→ADMIN→CEO), allow SUPER_ADMIN fallback.
+    if (normalizedRole === 'DRIVER') {
+      return { 2: EXECUTIVE_STAGE_ROLES };
     }
     return {};
   }

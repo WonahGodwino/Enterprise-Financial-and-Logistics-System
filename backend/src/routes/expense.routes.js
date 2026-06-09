@@ -15,13 +15,13 @@ router.get('/categories', expenseController.getExpenseCategories);
 router.get('/analytics', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN']), expenseController.getExpenseAnalytics);
 router.get('/stats', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN']), expenseController.getExpenseStats);
 router.get('/monthly-comparison', authorize(['ADMIN', 'CEO', 'SUPER_ADMIN']), expenseController.getMonthlyComparison);
-router.get('/pending-approvals', authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'SUPER_ADMIN']), expenseController.getPendingApprovals);
+router.get('/pending-approvals', authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'SUPER_ADMIN', 'CHIEF_DRIVER', 'CEO']), expenseController.getPendingApprovals);
 router.get('/trash', authorize(['ADMIN', 'SUPER_ADMIN']), expenseController.getTrashedExpenses);
 router.get('/:id', expenseController.getExpenseById);
 
 // Expense creation and modification
 router.post('/', 
-  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT']), 
+  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'DRIVER', 'CHIEF_DRIVER', 'EMPLOYEE', 'SUPERVISOR', 'CEO', 'SUPER_ADMIN', 'AUDITOR']), 
   upload.fields([
     { name: 'receipt', maxCount: 1 },
     { name: 'attachments', maxCount: 5 },
@@ -60,17 +60,17 @@ router.post('/modifications/:requestId/approve',
 
 // Approval routes
 router.put('/:id/approve', 
-  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN']), 
+  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN', 'CHIEF_DRIVER']), 
   expenseController.approveExpense
 );
 
 router.put('/:id/reject', 
-  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN']), 
+  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN', 'CHIEF_DRIVER']), 
   expenseController.rejectExpense
 );
 
 router.put('/:id/complete',
-  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN']),
+  authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN', 'CHIEF_DRIVER']),
   upload.fields([
     { name: 'receipt', maxCount: 1 },
     { name: 'attachments', maxCount: 5 },
