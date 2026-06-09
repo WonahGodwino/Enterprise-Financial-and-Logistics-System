@@ -42,4 +42,3 @@ backend/.env.local
 .env
 .env.local
 .env.production
-deploy.bat
