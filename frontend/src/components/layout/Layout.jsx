@@ -161,7 +161,7 @@ const Layout = () => {
 
       {/* Main content area */}
       <main className={`pt-16 p-4 md:p-6 flex-1 md:ml-72 transition-colors duration-300 ${mode === 'dark' ? 'bg-slate-900' : 'bg-amber-50/40'}`}>
-        <div className="max-w-full overflow-x-auto">
+        <div className="max-w-full">
           <Outlet />
         </div>
       </main>

@@ -9,12 +9,15 @@ import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
 const INCOME_TYPE_OPTIONS = [
-  'SERVICE', 'PRODUCT', 'RENTAL', 'INSTALLATION', 'MAINTENANCE', 'CONSULTING', 'OTHER',
+  'SALES', 'SERVICES', 'OTHERS',
 ];
 const INCOME_CATEGORY_OPTIONS = [
   'CAR_HIRE', 'CAR_SALES', 'CAR_MAINTENANCE', 'SECURITY_GUARD', 'CCTV_INSTALLATION',
   'SMART_HOME', 'SECURITY_CONSULTING', 'GENERAL_CONTRACT', 'RENOVATION',
-  'CONSTRUCTION_MATERIALS', 'PROJECT_MANAGEMENT', 'OTHER',
+  'CONSTRUCTION_MATERIALS', 'PROJECT_MANAGEMENT',
+  'TRAINING', 'BOUNCER', 'ARMED_ESCORT', 'FLIGHT_BOOKING', 'HOTEL_RESERVATION',
+  'VISA_SUPPORT', 'TOURS',
+  'OTHER',
 ];
 const MAIN_SUBSIDIARY_CODE = 'MAIN';
 const CAR_RELATED_INCOME_CATEGORIES = new Set(['CAR_HIRE', 'CAR_SALES', 'CAR_MAINTENANCE']);
@@ -109,7 +112,7 @@ const IncomeEntry = () => {
 
   const canRecordPayment = CAN_RECORD_PAYMENT_ROLES.has(String(user?.role || '').toUpperCase());
 
-  const [formData, setFormData] = useState({ incomeType: 'SERVICE', category: 'CAR_HIRE', customerId: '', subsidiaryId: '', vehicleId: '', incomeDate: new Date().toISOString().slice(0, 10), notes: '' });
+  const [formData, setFormData] = useState({ incomeType: 'SERVICES', category: 'CAR_HIRE', customerId: '', subsidiaryId: '', vehicleId: '', incomeDate: new Date().toISOString().slice(0, 10), notes: '' });
   const [stagingItem, setStagingItem] = useState({ ...BLANK_ITEM });
   const [stagedItems, setStagedItems] = useState([]);
 

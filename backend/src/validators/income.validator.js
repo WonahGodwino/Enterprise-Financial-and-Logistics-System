@@ -18,13 +18,14 @@ export const validateIncome = (data, isUpdate = false) => {
 
   const schema = Joi.object({
     incomeType: Joi.string().valid(
-      'SERVICE', 'PRODUCT', 'RENTAL', 'INSTALLATION', 
-      'MAINTENANCE', 'CONSULTING', 'OTHER'
+      'SALES', 'SERVICES', 'OTHERS'
     ).optional(),
     category: Joi.string().valid(
       'CAR_HIRE', 'CAR_SALES', 'CAR_MAINTENANCE',
       'SECURITY_GUARD', 'CCTV_INSTALLATION', 'SMART_HOME', 'SECURITY_CONSULTING',
       'GENERAL_CONTRACT', 'RENOVATION', 'CONSTRUCTION_MATERIALS', 'PROJECT_MANAGEMENT',
+      'TRAINING', 'BOUNCER', 'ARMED_ESCORT', 'FLIGHT_BOOKING', 'HOTEL_RESERVATION',
+      'VISA_SUPPORT', 'TOURS',
       'OTHER'
     ).optional(),
     amount: Joi.number().positive().optional(),
@@ -64,13 +65,14 @@ export const validateIncome = (data, isUpdate = false) => {
 
   return schema.keys({
     incomeType: Joi.string().valid(
-      'SERVICE', 'PRODUCT', 'RENTAL', 'INSTALLATION', 
-      'MAINTENANCE', 'CONSULTING', 'OTHER'
+      'SALES', 'SERVICES', 'OTHERS'
     ).required(),
     category: Joi.string().valid(
       'CAR_HIRE', 'CAR_SALES', 'CAR_MAINTENANCE',
       'SECURITY_GUARD', 'CCTV_INSTALLATION', 'SMART_HOME', 'SECURITY_CONSULTING',
       'GENERAL_CONTRACT', 'RENOVATION', 'CONSTRUCTION_MATERIALS', 'PROJECT_MANAGEMENT',
+      'TRAINING', 'BOUNCER', 'ARMED_ESCORT', 'FLIGHT_BOOKING', 'HOTEL_RESERVATION',
+      'VISA_SUPPORT', 'TOURS',
       'OTHER'
     ).required(),
     incomeDate: Joi.date().max('now').required(),

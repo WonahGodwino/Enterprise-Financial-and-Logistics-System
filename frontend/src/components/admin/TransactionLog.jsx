@@ -262,11 +262,11 @@ const TransactionLog = () => {
   };
 
   return (
-    <div className="space-y-6 transaction-log-page">
+    <div className="space-y-6 transaction-log-page pt-12">
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-2xl font-bold ${mode === 'dark' ? 'text-white' : 'text-gray-800'}`}>Transaction Log</h1>
-          <p className="text-sm text-gray-500">Detailed financial activity trail with actor, requester, modifier and approver context.</p>
+          <p className={mode === 'dark' ? 'text-sm text-slate-400' : 'text-sm text-gray-500'}>Detailed financial activity trail with actor, requester, modifier and approver context.</p>
         </div>
       </div>
 

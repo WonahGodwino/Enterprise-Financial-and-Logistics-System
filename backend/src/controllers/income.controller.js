@@ -136,6 +136,13 @@ export class IncomeController {
     } = req.query;
 
     const where = {};
+
+    // Role-based scoping: CEO and SUPER_ADMIN see all; others see only their own entries
+    const PRIVILEGED_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
+    if (!PRIVILEGED_ROLES.has(String(req.user?.role || '').toUpperCase())) {
+      where.createdById = req.user.id;
+    }
+
     if (startDate && endDate) {
       where.incomeDate = {
         gte: new Date(startDate),

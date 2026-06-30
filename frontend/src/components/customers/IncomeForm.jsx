@@ -129,17 +129,24 @@ export const IncomeForm = ({ open, onClose, onSubmit, initialData }) => {
   // Category options based on income type
   const getCategoryOptions = () => {
     const categories = {
-      'CAR_HIRE': ['CAR_HIRE'],
-      'CAR_SALES': ['CAR_SALES'],
-      'CAR_MAINTENANCE': ['CAR_MAINTENANCE'],
-      'SECURITY_GUARD': ['SECURITY_GUARD'],
-      'CCTV_INSTALLATION': ['CCTV_INSTALLATION'],
-      'SMART_HOME': ['SMART_HOME'],
-      'SECURITY_CONSULTING': ['SECURITY_CONSULTING'],
-      'GENERAL_CONTRACT': ['GENERAL_CONTRACT'],
-      'RENOVATION': ['RENOVATION'],
-      'CONSTRUCTION_MATERIALS': ['CONSTRUCTION_MATERIALS'],
-      'PROJECT_MANAGEMENT': ['PROJECT_MANAGEMENT']
+      'SALES': ['CAR_SALES'],
+      'SERVICES': [
+        'CAR_HIRE', 'CAR_MAINTENANCE', 'CHAUFFEUR_SERVICE', 'AIRPORT_TRANSFER',
+        'EVENT_TRANSPORT', 'CAR_RENTAL_DAILY', 'CAR_RENTAL_WEEKLY', 'CAR_RENTAL_MONTHLY',
+        'CAR_LEASE', 'SECURITY_GUARD', 'CCTV_INSTALLATION', 'SMART_HOME',
+        'SECURITY_CONSULTING', 'ALARM_MONITORING', 'ACCESS_CONTROL', 'FIRE_ALARM',
+        'SECURITY_AUDIT', 'RISK_ASSESSMENT', 'EXECUTIVE_PROTECTION', 'EVENT_SECURITY',
+        'MOBILE_PATROL', 'TRAINING', 'BOUNCER', 'ARMED_ESCORT', 'FLIGHT_BOOKING',
+        'HOTEL_RESERVATION', 'VISA_SUPPORT', 'TOURS',
+        'ELECTRICAL_INSTALLATION', 'PLUMBING_INSTALLATION', 'TILING', 'PAINTING',
+        'LANDSCAPING',
+      ],
+      'OTHERS': [
+        'GENERAL_CONTRACT', 'RENOVATION', 'CONSTRUCTION_MATERIALS',
+        'PROJECT_MANAGEMENT', 'ARCHITECTURAL_DESIGN', 'STRUCTURAL_ENGINEERING',
+        'BUILDING_CONSTRUCTION', 'ROAD_CONSTRUCTION', 'FOUNDATION_WORK', 'ROOFING',
+        'OTHER',
+      ]
     };
     return categories[formik.values.incomeType] || ['OTHER'];
   };
@@ -162,13 +169,9 @@ export const IncomeForm = ({ open, onClose, onSubmit, initialData }) => {
                   onChange={formik.handleChange}
                   error={formik.touched.incomeType && Boolean(formik.errors.incomeType)}
                 >
-                  <MenuItem value="SERVICE">Service</MenuItem>
-                  <MenuItem value="PRODUCT">Product</MenuItem>
-                  <MenuItem value="RENTAL">Rental</MenuItem>
-                  <MenuItem value="INSTALLATION">Installation</MenuItem>
-                  <MenuItem value="MAINTENANCE">Maintenance</MenuItem>
-                  <MenuItem value="CONSULTING">Consulting</MenuItem>
-                  <MenuItem value="OTHER">Other</MenuItem>
+                  <MenuItem value="SALES">Sales</MenuItem>
+                  <MenuItem value="SERVICES">Services</MenuItem>
+                  <MenuItem value="OTHERS">Others</MenuItem>
                 </Select>
                 {formik.touched.incomeType && formik.errors.incomeType && (
                   <FormHelperText error>{formik.errors.incomeType}</FormHelperText>

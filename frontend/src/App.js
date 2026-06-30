@@ -119,7 +119,7 @@ function App() {
 
                     {/* Customer Management */}
                     <Route path="customers" element={
-                      <PrivateRoute requiredRoles={['ADMIN', 'CEO', 'ACCOUNTANT']}>
+                      <PrivateRoute>
                         <CustomerEntry />
                       </PrivateRoute>
                     } />

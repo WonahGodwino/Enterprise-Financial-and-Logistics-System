@@ -47,9 +47,23 @@ export class CustomerController {
     
     const customer = await this.customerService.getCustomerDashboard(id);
     
+    // Also fetch assigned staff info
+    const fullCustomer = await this.customerService.customerRepository.findById(id, {
+      assignedStaff: {
+        select: { id: true, fullName: true, role: true },
+      },
+      createdBy: {
+        select: { id: true, fullName: true },
+      },
+    });
+    
     res.json({
       success: true,
-      data: customer
+      data: {
+        ...customer,
+        assignedStaff: fullCustomer?.assignedStaff || null,
+        createdBy: fullCustomer?.createdBy || null,
+      }
     });
   });
 
@@ -64,6 +78,13 @@ export class CustomerController {
     } = req.query;
 
     const where = {};
+
+    // Role-based scoping: CEO and SUPER_ADMIN see all customers; staff see only their assigned customers
+    const PRIVILEGED_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
+    if (!PRIVILEGED_ROLES.has(String(req.user?.role || '').toUpperCase())) {
+      where.assignedStaffId = req.user.id;
+    }
+
     if (type) where.customerType = type;
     if (status) where.status = status;
     if (search) {
@@ -114,6 +135,13 @@ export class CustomerController {
                 code: true,
               },
             },
+          },
+        },
+        assignedStaff: {
+          select: {
+            id: true,
+            fullName: true,
+            role: true,
           },
         },
         incomeRecords: {
@@ -214,6 +242,71 @@ export class CustomerController {
     res.json({
       success: true,
       message: 'Customer deleted successfully'
+    });
+  });
+
+  /**
+   * Transfer a customer from one staff to another.
+   * Only CEO and SUPER_ADMIN can transfer customers.
+   */
+  transferCustomer = asyncHandler(async (req, res) => {
+    const { customerId, toStaffId, reason, notes } = req.body;
+
+    if (!customerId || !toStaffId) {
+      return res.status(400).json({
+        success: false,
+        message: 'customerId and toStaffId are required'
+      });
+    }
+
+    const result = await this.customerService.transferCustomer(
+      customerId,
+      toStaffId,
+      req.user,
+      { reason, notes }
+    );
+
+    res.json({
+      success: true,
+      message: 'Customer transferred successfully',
+      data: result
+    });
+  });
+
+  /**
+   * Get customer transfer history.
+   * CEO/SUPER_ADMIN see all transfers; staff see transfers involving their customers.
+   */
+  getTransferHistory = asyncHandler(async (req, res) => {
+    const { customerId } = req.query;
+
+    const history = await this.customerService.getTransferHistory(
+      customerId || null,
+      req.user
+    );
+
+    res.json({
+      success: true,
+      data: history
+    });
+  });
+
+  /**
+   * Get indebted customers report.
+   * CEO/SUPER_ADMIN see all indebted customers; staff see only their own assigned customers.
+   */
+  getIndebtedCustomersReport = asyncHandler(async (req, res) => {
+    const { minBalance, subsidiaryId } = req.query;
+
+    const report = await this.customerService.getIndebtedCustomersReport(
+      req.user,
+      minBalance ? parseFloat(minBalance) : 0,
+      subsidiaryId || null
+    );
+
+    res.json({
+      success: true,
+      data: report
     });
   });
 }

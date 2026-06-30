@@ -9,12 +9,14 @@ const customerController = new CustomerController();
 router.use(authenticate);
 
 // Customer CRUD
-router.post('/', authorize(['ADMIN', 'MANAGER']), customerController.createCustomer);
-router.get('/', customerController.getAllCustomers);
+router.post('/', authorize(['ADMIN', 'MANAGER', 'EMPLOYEE', 'SUPERVISOR', 'DRIVER', 'CHIEF_DRIVER', 'CEO', 'SUPER_ADMIN', 'AUDITOR', 'ACCOUNTANT', 'HR', 'VIEWER']), customerController.createCustomer);
 router.get('/report', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), customerController.getCustomerReport);
 router.get('/with-income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), customerController.getCustomersWithIncome);
 router.get('/without-income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), customerController.getCustomersWithoutIncome);
 router.get('/top', authorize(['ADMIN', 'CEO']), customerController.getTopCustomers);
+router.get('/indebted', authenticate, customerController.getIndebtedCustomersReport);
+router.get('/transfer-history', authenticate, customerController.getTransferHistory);
+router.get('/', customerController.getAllCustomers);
 router.get('/:id', customerController.getCustomer);
 router.put('/:id', authorize(['ADMIN', 'MANAGER']), customerController.updateCustomer);
 router.delete('/:id', authorize(['ADMIN']), customerController.deleteCustomer);

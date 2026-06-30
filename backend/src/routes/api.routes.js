@@ -847,10 +847,18 @@ router.post('/income/:id/pay', authorize(['ADMIN', 'CEO', 'SUPER_ADMIN']), incom
 router.delete('/income/:id', authorize(['ADMIN','CEO','SUPER_ADMIN']), incomeController.deleteIncome);
 
 // Customer routes (for income source selection and finance reporting)
-router.post('/customers', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), customerController.createCustomer);
-router.get('/customers', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), customerController.getAllCustomers);
-router.put('/customers/:id', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), customerController.updateCustomer);
-router.delete('/customers/:id', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), customerController.deleteCustomer);
+router.post('/customers', customerController.createCustomer);
+router.get('/customers', customerController.getAllCustomers);
+router.get('/customers/report', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), customerController.getCustomerReport);
+router.get('/customers/with-income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), customerController.getCustomersWithIncome);
+router.get('/customers/without-income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), customerController.getCustomersWithoutIncome);
+router.get('/customers/top', authorize(['ADMIN', 'CEO']), customerController.getTopCustomers);
+router.get('/customers/indebted', customerController.getIndebtedCustomersReport);
+router.get('/customers/transfer-history', customerController.getTransferHistory);
+router.post('/customers/transfer', authorize(['CEO', 'SUPER_ADMIN']), customerController.transferCustomer);
+router.put('/customers/:id', customerController.updateCustomer);
+router.delete('/customers/:id', authorize(['ADMIN']), customerController.deleteCustomer);
+router.get('/customers/:id', customerController.getCustomer);
 
 // Profit routes
 router.get('/profit/monthly/:year/:month', profitController.calculateMonthlyProfit);

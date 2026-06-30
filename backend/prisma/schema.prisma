@@ -536,6 +536,10 @@ model User {
   chiefReviewedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestChiefDecisionBy")
   finalReviewedVehicleStatusChanges VehicleStatusRequest[] @relation("VehicleStatusRequestFinalDecisionBy")
   createdAssetTypes VehicleAssetType[]    @relation("VehicleAssetTypeCreator")
+  assignedCustomers Customer[] @relation("CustomerAssignedStaff")
+  customerTransfersFrom CustomerTransfer[] @relation("CustomerTransferFromStaff")
+  customerTransfersTo   CustomerTransfer[] @relation("CustomerTransferToStaff")
+  customerTransfersMade CustomerTransfer[] @relation("CustomerTransferBy")
 
   @@index([employeeId])
   @@index([managerId])
@@ -750,6 +754,9 @@ model Customer {
   subsidiary        Subsidiary @relation(fields: [subsidiaryId], references: [id])
   customerSubsidiaries CustomerSubsidiary[]
   
+  assignedStaffId   String?
+  assignedStaff     User?     @relation("CustomerAssignedStaff", fields: [assignedStaffId], references: [id])
+  
   createdById       String
   createdBy         User      @relation("CustomerCreatedBy", fields: [createdById], references: [id])
   updatedById       String?
@@ -759,6 +766,7 @@ model Customer {
   invoices          Invoice[]
   payments          Payment[]
   transactions      FinanceTransaction[]
+  transferHistory   CustomerTransfer[]
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -772,6 +780,7 @@ model Customer {
   @@index([customerType])
   @@index([status])
   @@index([subsidiaryId])
+  @@index([assignedStaffId])
 }
 
 model CustomerSubsidiary {
@@ -786,6 +795,28 @@ model CustomerSubsidiary {
   @@unique([customerId, subsidiaryId])
   @@index([customerId])
   @@index([subsidiaryId])
+}
+
+model CustomerTransfer {
+  id              String    @id @default(cuid())
+  customerId      String
+  fromStaffId     String?
+  toStaffId       String
+  transferredById String
+  reason          String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  fromStaff       User?     @relation("CustomerTransferFromStaff", fields: [fromStaffId], references: [id])
+  toStaff         User      @relation("CustomerTransferToStaff", fields: [toStaffId], references: [id])
+  transferredBy   User      @relation("CustomerTransferBy", fields: [transferredById], references: [id])
+
+  @@index([customerId])
+  @@index([fromStaffId])
+  @@index([toStaffId])
+  @@index([transferredById])
+  @@index([createdAt])
 }
 
 // ============================================
@@ -1337,19 +1368,9 @@ enum CustomerStatus {
 
 // Income related enums
 enum IncomeType {
-  SERVICE
-  PRODUCT
-  RENTAL
-  INSTALLATION
-  MAINTENANCE
-  CONSULTING
-  COMMISSION
-  ROYALTY
-  INTEREST
-  DIVIDEND
-  GRANT
-  DONATION
-  OTHER
+  SALES
+  SERVICES
+  OTHERS
 }
 
 enum IncomeCategory {
@@ -1376,6 +1397,14 @@ enum IncomeCategory {
   EXECUTIVE_PROTECTION
   EVENT_SECURITY
   MOBILE_PATROL
+  
+  TRAINING
+  BOUNCER
+  ARMED_ESCORT
+  FLIGHT_BOOKING
+  HOTEL_RESERVATION
+  VISA_SUPPORT
+  TOURS
   
   GENERAL_CONTRACT
   RENOVATION

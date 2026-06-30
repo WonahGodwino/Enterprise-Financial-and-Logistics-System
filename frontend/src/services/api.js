@@ -496,6 +496,21 @@ class ApiService {
     return response.data;
   }
 
+  async transferCustomer(data) {
+    const response = await this.api.post('/customers/transfer', data);
+    return response.data;
+  }
+
+  async getCustomerTransferHistory(params) {
+    const response = await this.api.get('/customers/transfer-history', { params });
+    return response.data;
+  }
+
+  async getIndebtedCustomersReport(params) {
+    const response = await this.api.get('/customers/indebted', { params });
+    return response.data;
+  }
+
   // Reports
   async generateReport(params) {
     const response = await this.api.get('/reports/generate', { params });

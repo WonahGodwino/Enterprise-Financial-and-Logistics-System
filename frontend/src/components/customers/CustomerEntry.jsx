@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, PlusCircle, RefreshCw, UserCircle } from 'lucide-react';
+import { Building2, PlusCircle, RefreshCw, UserCircle, ArrowLeftRight, Users, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
 const CUSTOMER_TYPE_OPTIONS = [
@@ -58,6 +59,9 @@ const toErrorMessage = (err, fallback) => {
 const CustomerEntry = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { mode } = useTheme();
+  const dm = mode === 'dark';
+  const c = (light, dark) => dm ? dark : light;
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -352,50 +356,136 @@ const CustomerEntry = () => {
     }
   };
 
+  // ---- TRANSFER FEATURE / ADMIN VIEW ----
+  const canTransfer = useMemo(() => {
+    const role = String(user?.role || '').toUpperCase();
+    return role === 'CEO' || role === 'SUPER_ADMIN';
+  }, [user?.role]);
+  const [adminSubsidiaryFilter, setAdminSubsidiaryFilter] = useState('');
+  const [transferModal, setTransferModal] = useState({ open: false, customer: null });
+  const [staffList, setStaffList] = useState([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [transferForm, setTransferForm] = useState({ toStaffId: '', reason: '', notes: '' });
+  const [transferring, setTransferring] = useState(false);
+  const [staffCustomerCounts, setStaffCustomerCounts] = useState([]);
+
+  const loadStaffList = useCallback(async () => {
+    if (!canTransfer) return;
+    setStaffLoading(true);
+    try {
+      const params = { limit: 500, isActive: true };
+      if (adminSubsidiaryFilter) params.subsidiaryId = adminSubsidiaryFilter;
+      const res = await api.getUsers(params);
+      const users = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setStaffList(users.filter((u) => u.isActive).sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '')));
+    } catch { setStaffList([]); }
+    finally { setStaffLoading(false); }
+  }, [canTransfer, adminSubsidiaryFilter]);
+
+  const loadStaffCustomerCounts = useCallback(async () => {
+    if (!canTransfer) return;
+    try {
+      const params = { limit: 1000, status: 'ACTIVE' };
+      if (adminSubsidiaryFilter) params.subsidiaryId = adminSubsidiaryFilter;
+      const res = await api.getCustomers(params);
+      const allCustomers = Array.isArray(res?.data) ? res.data : [];
+      const counts = {};
+      allCustomers.forEach((c) => { const sid = c.assignedStaffId || 'unassigned'; if (!counts[sid]) counts[sid] = { id: sid, name: 'Unassigned', count: 0 }; counts[sid].count++; if (c.assignedStaff) counts[sid].name = c.assignedStaff.fullName; });
+      setStaffCustomerCounts(Object.values(counts).sort((a, b) => b.count - a.count));
+    } catch { setStaffCustomerCounts([]); }
+  }, [canTransfer, adminSubsidiaryFilter]);
+
+  useEffect(() => { if (canTransfer) { loadStaffList(); loadStaffCustomerCounts(); } }, [canTransfer, loadStaffList, loadStaffCustomerCounts]);
+
+  const openTransferModal = (customer) => { setTransferForm({ toStaffId: customer.assignedStaffId || '', reason: '', notes: '' }); setTransferModal({ open: true, customer }); };
+  const handleTransfer = async () => {
+    if (!transferModal.customer || !transferForm.toStaffId) return;
+    setTransferring(true);
+    try {
+      await api.transferCustomer({ customerId: transferModal.customer.id, toStaffId: transferForm.toStaffId, reason: transferForm.reason || undefined, notes: transferForm.notes || undefined });
+      showToast('Customer transferred successfully.', 'success');
+      setTransferModal({ open: false, customer: null });
+      await loadCustomers(filters); await loadStaffCustomerCounts();
+    } catch (err) { showToast(toErrorMessage(err, 'Transfer failed'), 'error'); }
+    finally { setTransferring(false); }
+  };
+  // ---- END TRANSFER ----
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Customer Entry</h1>
-          <p className="text-sm text-gray-600">
+          <h1 className={c('text-2xl font-bold text-gray-800','text-2xl font-bold text-slate-100')}>Customer Entry</h1>
+          <p className={c('text-sm text-gray-600','text-sm text-slate-400')}>
             Register Individual or Corporate Organization customer records using your CUSTOMER MANAGEMENT process.
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-red-700 text-sm">
+        <div className={c('inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-red-700 text-sm','inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-3 py-2 text-red-200 text-sm border border-red-500/40')}>
           <UserCircle className="h-4 w-4" />
           Signed in as {user?.role || 'USER'}
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg bg-red-50 p-4">
-          <p className="text-sm text-red-700">Total Customers</p>
-          <p className="mt-1 text-xl font-semibold text-red-900">{stats.total}</p>
+        <div className={c('rounded-lg bg-red-50 p-4','rounded-lg bg-red-500/10 p-4 border border-red-500/30')}>
+          <p className={c('text-sm text-red-700','text-sm text-red-300')}>Total Customers</p>
+          <p className={c('mt-1 text-xl font-semibold text-red-900','mt-1 text-xl font-semibold text-red-200')}>{stats.total}</p>
         </div>
-        <div className="rounded-lg bg-emerald-50 p-4">
-          <p className="text-sm text-emerald-700">Corporate Organizations</p>
-          <p className="mt-1 text-xl font-semibold text-emerald-900">{stats.organizations}</p>
+        <div className={c('rounded-lg bg-emerald-50 p-4','rounded-lg bg-emerald-500/10 p-4 border border-emerald-500/30')}>
+          <p className={c('text-sm text-emerald-700','text-sm text-emerald-300')}>Corporate Organizations</p>
+          <p className={c('mt-1 text-xl font-semibold text-emerald-900','mt-1 text-xl font-semibold text-emerald-200')}>{stats.organizations}</p>
         </div>
-        <div className="rounded-lg bg-amber-50 p-4">
-          <p className="text-sm text-amber-700">Individuals</p>
-          <p className="mt-1 text-xl font-semibold text-amber-900">{stats.individuals}</p>
+        <div className={c('rounded-lg bg-amber-50 p-4','rounded-lg bg-amber-500/10 p-4 border border-amber-500/30')}>
+          <p className={c('text-sm text-amber-700','text-sm text-amber-300')}>Individuals</p>
+          <p className={c('mt-1 text-xl font-semibold text-amber-900','mt-1 text-xl font-semibold text-amber-200')}>{stats.individuals}</p>
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-800">
+      {/* CEO / SUPER_ADMIN: Customers per Staff */}
+      {canTransfer && (
+        <div className="space-y-4">
+          <div className={c('flex items-center gap-3 rounded-lg bg-white p-4 shadow','flex items-center gap-3 rounded-lg bg-slate-800 p-4 shadow border border-slate-700')}>
+            <Users className="h-5 w-5 text-blue-600" />
+            <span className={c('text-sm font-medium text-gray-700','text-sm font-medium text-slate-200')}>Admin View — Filter by Subsidiary:</span>
+            <select value={adminSubsidiaryFilter} onChange={(e) => setAdminSubsidiaryFilter(e.target.value)} className={c('rounded-lg border border-gray-300 px-3 py-1.5 text-sm','rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-100')}>
+              <option value="">All Subsidiaries</option>
+              {subsidiaryOptions.map((s) => <option key={s.id} value={s.id}>{formatSubsidiaryLabel(s)}</option>)}
+            </select>
+          </div>
+          <div className={c('rounded-lg bg-white p-6 shadow','rounded-lg bg-slate-800 p-6 shadow border border-slate-700')}>
+            <h3 className={c('mb-3 flex items-center gap-2 text-base font-semibold text-gray-800','mb-3 flex items-center gap-2 text-base font-semibold text-slate-100')}>
+              <Users className="h-5 w-5 text-blue-600" />Customers per Staff
+            </h3>
+            {staffCustomerCounts.length === 0 ? (
+              <p className={c('text-sm text-gray-500','text-sm text-slate-400')}>No customer assignments yet. Assign customers to staff via the Transfer button.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {staffCustomerCounts.map((s) => (
+                  <div key={s.id} className={c('rounded-lg border border-gray-200 p-3 text-center','rounded-lg border border-slate-600 p-3 text-center bg-slate-700/50')}>
+                    <p className={c('text-xs text-gray-500 truncate','text-xs text-slate-400 truncate')} title={s.name}>{s.name}</p>
+                    <p className="mt-1 text-xl font-bold text-blue-700">{s.count}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className={c(`rounded-lg bg-white p-6 shadow`,`rounded-lg bg-slate-800 p-6 shadow border border-slate-700`)}>
+        <h2 className={c('mb-4 flex items-center gap-2 text-lg font-semibold text-gray-800','mb-4 flex items-center gap-2 text-lg font-semibold text-slate-100')}>
           <PlusCircle className="h-5 w-5 text-red-600" />
           {editingCustomerId ? 'Edit Customer' : 'New Customer Registration'}
         </h2>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Customer Type</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Customer Type</span>
             <select
               name="customerType"
               value={formData.customerType}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             >
               {CUSTOMER_TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -404,7 +494,7 @@ const CustomerEntry = () => {
           </label>
 
           <div className="text-sm">
-            <span className="mb-1 block text-gray-700">Subsidiaries <span className="text-red-500">*</span></span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Subsidiaries <span className="text-red-500">*</span></span>
             <div className="flex flex-wrap gap-2">
               {subsidiaryOptions.map((subsidiary) => {
                 const checked = (formData.subsidiaryIds || []).includes(subsidiary.id);
@@ -439,12 +529,12 @@ const CustomerEntry = () => {
           </div>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Status</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Status</span>
             <select
               name="status"
               value={formData.status}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             >
               {STATUS_OPTIONS.map((status) => (
                 <option key={status} value={status}>{status}</option>
@@ -455,99 +545,99 @@ const CustomerEntry = () => {
           {formData.customerType === 'ORGANIZATION' ? (
             <>
               <label className="text-sm md:col-span-2">
-                <span className="mb-1 block text-gray-700">Company Name</span>
+                <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Company Name</span>
                 <input
                   name="companyName"
                   required
                   value={formData.companyName}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
                   placeholder="Corporate organization legal name"
                 />
               </label>
               <label className="text-sm">
-                <span className="mb-1 block text-gray-700">Contact Person</span>
+                <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Contact Person</span>
                 <input
                   name="contactPerson"
                   value={formData.contactPerson}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
                 />
               </label>
               <label className="text-sm">
-                <span className="mb-1 block text-gray-700">Contact Position</span>
+                <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Contact Position</span>
                 <input
                   name="contactPosition"
                   value={formData.contactPosition}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
                 />
               </label>
             </>
           ) : (
             <>
               <label className="text-sm">
-                <span className="mb-1 block text-gray-700">First Name</span>
+                <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>First Name</span>
                 <input
                   name="firstName"
                   required
                   value={formData.firstName}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
                 />
               </label>
               <label className="text-sm">
-                <span className="mb-1 block text-gray-700">Last Name</span>
+                <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Last Name</span>
                 <input
                   name="lastName"
                   required
                   value={formData.lastName}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
                 />
               </label>
             </>
           )}
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Email</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Email</span>
             <input
               name="email"
               type="email"
               value={formData.email}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Phone</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Phone</span>
             <input
               name="phone"
               value={formData.phone}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Alternative Phone</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Alternative Phone</span>
             <input
               name="alternativePhone"
               value={formData.alternativePhone}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Country</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Country</span>
             <select
               name="country"
               value={formData.country}
               onChange={handleFormChange}
               disabled={countryLoading}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100 disabled:bg-slate-600`)}
             >
               {countryLoading ? (
                 <option value="">Loading countries...</option>
@@ -560,13 +650,13 @@ const CustomerEntry = () => {
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">State</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>State</span>
             <select
               name="state"
               value={formData.state}
               onChange={handleFormChange}
               disabled={stateLoading || stateOptions.length === 0}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100 disabled:bg-slate-600`)}
             >
               <option value="">{stateLoading ? 'Loading states...' : 'Select state'}</option>
               {stateOptions.map((s) => (
@@ -576,48 +666,48 @@ const CustomerEntry = () => {
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">City</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>City</span>
             <input
               name="city"
               value={formData.city}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm md:col-span-2">
-            <span className="mb-1 block text-gray-700">Address</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Address</span>
             <textarea
               name="address"
               rows={2}
               value={formData.address}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Tax ID</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Tax ID</span>
             <input
               name="taxId"
               value={formData.taxId}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Registration Number</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Registration Number</span>
             <input
               name="registrationNumber"
               value={formData.registrationNumber}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Credit Limit</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Credit Limit</span>
             <input
               name="creditLimit"
               type="number"
@@ -625,29 +715,29 @@ const CustomerEntry = () => {
               step="0.01"
               value={formData.creditLimit}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block text-gray-700">Payment Terms</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Payment Terms</span>
             <input
               name="paymentTerms"
               value={formData.paymentTerms}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
               placeholder="Example: Net 30"
             />
           </label>
 
           <label className="text-sm md:col-span-2">
-            <span className="mb-1 block text-gray-700">Notes</span>
+            <span className={c(`mb-1 block text-gray-700`,`mb-1 block text-slate-200`)}>Notes</span>
             <textarea
               name="notes"
               rows={2}
               value={formData.notes}
               onChange={handleFormChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100`)}
             />
           </label>
 
@@ -673,26 +763,15 @@ const CustomerEntry = () => {
         </form>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow">
+      <div className={c(`rounded-lg bg-white p-6 shadow`,`rounded-lg bg-slate-800 p-6 shadow border border-slate-700`)}>
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <div>
-            <p className="mb-1 text-xs text-gray-500">Search</p>
-            <input
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Name, email, phone"
-            />
+            <p className={c('mb-1 text-xs text-gray-500','mb-1 text-xs text-slate-400')}>Search</p>
+            <input name="search" value={filters.search} onChange={handleFilterChange} className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm`,`rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-400`)} placeholder="Name, email, phone" />
           </div>
           <div>
-            <p className="mb-1 text-xs text-gray-500">Type</p>
-            <select
-              name="type"
-              value={filters.type}
-              onChange={handleFilterChange}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
+            <p className={c('mb-1 text-xs text-gray-500','mb-1 text-xs text-slate-400')}>Type</p>
+            <select name="type" value={filters.type} onChange={handleFilterChange} className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm`,`rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100`)}>
               <option value="">All</option>
               {CUSTOMER_TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -705,7 +784,7 @@ const CustomerEntry = () => {
               name="subsidiaryId"
               value={filters.subsidiaryId}
               onChange={handleFilterChange}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm`,`rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100`)}
             >
               <option value="">All</option>
               {subsidiaryOptions.map((subsidiary) => (
@@ -719,7 +798,7 @@ const CustomerEntry = () => {
               name="status"
               value={filters.status}
               onChange={handleFilterChange}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm`,`rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100`)}
             >
               <option value="">All</option>
               {STATUS_OPTIONS.map((status) => (
@@ -727,23 +806,20 @@ const CustomerEntry = () => {
               ))}
             </select>
           </div>
-          <button
-            onClick={() => loadCustomers(filters)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
+          <button onClick={() => loadCustomers(filters)} className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50`,`rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700`)}>
             Apply Filters
           </button>
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-gray-500">Loading customers...</div>
+          <div className={c('py-8 text-center text-gray-500','py-8 text-center text-slate-400')}>Loading customers...</div>
         ) : customers.length === 0 ? (
-          <div className="py-8 text-center text-gray-500">No customers found.</div>
+          <div className={c('py-8 text-center text-gray-500','py-8 text-center text-slate-400')}>No customers found.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-red-600">
-                <tr className="border-b text-left text-white">
+                <tr className={c('border-b text-left text-white','border-b border-slate-700 text-left text-white')}>
                   <th className="py-2 pr-4">Name</th>
                   <th className="py-2 pr-4">Subsidiaries</th>
                   <th className="py-2 pr-4">Type</th>
@@ -752,37 +828,33 @@ const CustomerEntry = () => {
                   <th className="py-2 pr-4">Status</th>
                   <th className="py-2 pr-4">Total Income</th>
                   <th className="py-2 pr-4">Outstanding</th>
+                  <th className="py-2 pr-4">Assigned Staff</th>
                   <th className="py-2 pr-4">Created At</th>
                   <th className="py-2 pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {customers.map((customer) => (
-                  <tr key={customer.id} className="border-b">
-                    <td className="py-2 pr-4">{getCustomerDisplayName(customer)}</td>
-                    <td className="py-2 pr-4">{getCustomerSubsidiaryLabels(customer)}</td>
-                    <td className="py-2 pr-4">{customer.customerType}</td>
-                    <td className="py-2 pr-4">{customer.email || '-'}</td>
-                    <td className="py-2 pr-4">{customer.phone || '-'}</td>
-                    <td className="py-2 pr-4">{customer.status}</td>
-                    <td className="py-2 pr-4">{Number(customer.totalIncome || 0).toLocaleString()}</td>
-                    <td className="py-2 pr-4">{Number(customer.outstandingBalance || 0).toLocaleString()}</td>
-                    <td className="py-2 pr-4">{customer.createdAt ? new Date(customer.createdAt).toLocaleString() : '-'}</td>
+                  <tr key={customer.id} className={c('border-b','border-b border-slate-700')}>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-100')}>{getCustomerDisplayName(customer)}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{getCustomerSubsidiaryLabels(customer)}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{customer.customerType}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{customer.email || '-'}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{customer.phone || '-'}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{customer.status}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{Number(customer.totalIncome || 0).toLocaleString()}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{Number(customer.outstandingBalance || 0).toLocaleString()}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{customer.assignedStaff?.fullName || (customer.assignedStaffId ? customer.assignedStaffId.slice(0, 8) : 'Unassigned')}</td>
+                    <td className={c('py-2 pr-4','py-2 pr-4 text-slate-200')}>{customer.createdAt ? new Date(customer.createdAt).toLocaleString() : '-'}</td>
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEditCustomer(customer)}
-                          className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleSoftDeleteCustomer(customer)}
-                          disabled={customer.status === 'INACTIVE'}
-                          className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          Soft Delete
-                        </button>
+                        <button onClick={() => handleEditCustomer(customer)} className={c('rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50','rounded border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/20')}>Edit</button>
+                        {canTransfer && (
+                          <button onClick={() => openTransferModal(customer)} className={c('rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50','rounded border border-blue-500/40 px-2 py-1 text-xs text-blue-300 hover:bg-blue-500/20')} title="Transfer">
+                            <ArrowLeftRight className="h-3 w-3 inline mr-0.5" />Transfer
+                          </button>
+                        )}
+                        <button onClick={() => handleSoftDeleteCustomer(customer)} disabled={customer.status === 'INACTIVE'} className={c('rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50','rounded border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/20 disabled:opacity-50')}>Soft Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -792,6 +864,40 @@ const CustomerEntry = () => {
           </div>
         )}
       </div>
+
+      {/* Transfer Customer Modal */}
+      {transferModal.open && transferModal.customer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className={c('w-full max-w-md rounded-lg bg-white p-6 shadow-xl','w-full max-w-md rounded-lg bg-slate-800 p-6 shadow-xl border border-slate-700')}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className={c('text-lg font-semibold text-gray-800 flex items-center gap-2','text-lg font-semibold text-slate-100 flex items-center gap-2')}><ArrowLeftRight className="h-5 w-5 text-blue-600" />Transfer Customer</h2>
+              <button onClick={() => setTransferModal({ open: false, customer: null })} className={c('rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600','rounded-full p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-200')}><X className="h-5 w-5" /></button>
+            </div>
+            <div className={c('mb-4 rounded-lg bg-blue-50 p-3','mb-4 rounded-lg bg-blue-500/10 p-3 border border-blue-500/30')}>
+              <p className={c('text-sm text-blue-800','text-sm text-blue-200')}>Transferring: <strong>{getCustomerDisplayName(transferModal.customer)}</strong></p>
+              {transferModal.customer.assignedStaff && (<p className={c('text-xs text-blue-600 mt-1','text-xs text-blue-300 mt-1')}>Currently assigned to: {transferModal.customer.assignedStaff.fullName}</p>)}
+            </div>
+            <div className="space-y-4">
+              <label className="block text-sm"><span className={c('mb-1 block text-gray-700','mb-1 block text-slate-200')}>Transfer to Staff <span className="text-red-500">*</span></span>
+                <select value={transferForm.toStaffId} onChange={(e) => setTransferForm((prev) => ({ ...prev, toStaffId: e.target.value }))} className={c('w-full rounded-lg border border-gray-300 px-3 py-2','w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100')} disabled={staffLoading}>
+                  <option value="">{staffLoading ? 'Loading staff...' : 'Select staff member'}</option>
+                  {staffList.map((staff) => (<option key={staff.id} value={staff.id}>{staff.fullName} ({staff.role})</option>))}
+                </select>
+              </label>
+              <label className="block text-sm"><span className={c('mb-1 block text-gray-700','mb-1 block text-slate-200')}>Reason</span>
+                <textarea value={transferForm.reason} onChange={(e) => setTransferForm((prev) => ({ ...prev, reason: e.target.value }))} className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100 placeholder-slate-400`)} rows={2} placeholder="Reason for transfer (optional)" />
+              </label>
+              <label className="block text-sm"><span className={c('mb-1 block text-gray-700','mb-1 block text-slate-200')}>Notes</span>
+                <textarea value={transferForm.notes} onChange={(e) => setTransferForm((prev) => ({ ...prev, notes: e.target.value }))} className={c(`w-full rounded-lg border border-gray-300 px-3 py-2`,`w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-slate-100 placeholder-slate-400`)} rows={2} placeholder="Additional notes (optional)" />
+              </label>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setTransferModal({ open: false, customer: null })} className={c('rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50','rounded-lg border border-slate-600 px-4 py-2 text-slate-200 hover:bg-slate-700')}>Cancel</button>
+              <button onClick={handleTransfer} disabled={transferring || !transferForm.toStaffId} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50">{transferring && <RefreshCw className="h-4 w-4 animate-spin" />}{transferring ? 'Transferring...' : 'Confirm Transfer'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

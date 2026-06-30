@@ -63,6 +63,7 @@ export class CustomerService {
         paymentTerms: data.paymentTerms,
         subsidiaryId: primarySubsidiaryId,
         createdById: user.id,
+        assignedStaffId: user.id,
       };
 
       // Create customer
@@ -288,5 +289,176 @@ export class CustomerService {
         throw new AppError('Invalid phone number format', 400);
       }
     }
+  }
+
+  /**
+   * Transfer a customer from one staff to another.
+   * Only CEO and SUPER_ADMIN should be able to call this (enforced in controller route).
+   */
+  async transferCustomer(customerId, toStaffId, actor, { reason, notes } = {}) {
+    const customer = await this.customerRepository.findById(customerId);
+    if (!customer) {
+      throw new AppError('Customer not found', 404);
+    }
+
+    const toStaff = await prisma.user.findUnique({
+      where: { id: toStaffId },
+      select: { id: true, fullName: true, role: true, isActive: true },
+    });
+    if (!toStaff || !toStaff.isActive) {
+      throw new AppError('Target staff member not found or is inactive', 404);
+    }
+
+    const fromStaffId = customer.assignedStaffId || null;
+
+    // Create transfer record
+    const transfer = await prisma.customerTransfer.create({
+      data: {
+        customerId,
+        fromStaffId,
+        toStaffId,
+        transferredById: actor.id,
+        reason: reason || null,
+        notes: notes || null,
+      },
+    });
+
+    // Update customer assignment
+    await this.customerRepository.update(customerId, {
+      assignedStaffId: toStaffId,
+      updatedById: actor.id,
+    });
+
+    // Audit log
+    await this.auditService.log({
+      userId: actor.id,
+      action: 'CUSTOMER_TRANSFER',
+      entity: 'CUSTOMER',
+      entityId: customerId,
+      oldValue: { assignedStaffId: fromStaffId },
+      newValue: {
+        assignedStaffId: toStaffId,
+        transferId: transfer.id,
+        reason,
+      },
+    });
+
+    return {
+      transfer,
+      customer: await this.customerRepository.findById(customerId),
+      fromStaff: fromStaffId
+        ? await prisma.user.findUnique({ where: { id: fromStaffId }, select: { id: true, fullName: true } })
+        : null,
+      toStaff: { id: toStaff.id, fullName: toStaff.fullName },
+    };
+  }
+
+  /**
+   * Get customer transfer history.
+   */
+  async getTransferHistory(customerId, user) {
+    const PRIVILEGED_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
+
+    const where = {};
+    if (customerId) {
+      where.customerId = customerId;
+    }
+
+    // Non-privileged users only see transfers involving their customers
+    if (!PRIVILEGED_ROLES.has(String(user?.role || '').toUpperCase())) {
+      where.OR = [
+        { fromStaffId: user.id },
+        { toStaffId: user.id },
+      ];
+    }
+
+    return prisma.customerTransfer.findMany({
+      where,
+      include: {
+        customer: {
+          select: {
+            id: true,
+            companyName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        fromStaff: { select: { id: true, fullName: true } },
+        toStaff: { select: { id: true, fullName: true } },
+        transferredBy: { select: { id: true, fullName: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Get indebted customers report with role-based scoping.
+   * CEO/SUPER_ADMIN see all indebted customers; staff see only their own assigned customers.
+   */
+  async getIndebtedCustomersReport(user, minBalance = 0, subsidiaryId = null) {
+    const PRIVILEGED_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
+
+    const where = {
+      outstandingBalance: { gt: minBalance },
+      status: 'ACTIVE',
+    };
+
+    if (!PRIVILEGED_ROLES.has(String(user?.role || '').toUpperCase())) {
+      where.assignedStaffId = user.id;
+    }
+
+    if (subsidiaryId) {
+      where.OR = [
+        { subsidiaryId },
+        { customerSubsidiaries: { some: { subsidiaryId } } },
+      ];
+    }
+
+    const customers = await prisma.customer.findMany({
+      where,
+      include: {
+        assignedStaff: {
+          select: { id: true, fullName: true, role: true },
+        },
+        createdBy: {
+          select: { id: true, fullName: true },
+        },
+        subsidiary: {
+          select: { id: true, name: true, code: true },
+        },
+        incomeRecords: {
+          orderBy: { incomeDate: 'desc' },
+          take: 1,
+          select: { incomeDate: true, amount: true, paidAmount: true, createdAt: true },
+        },
+      },
+      orderBy: { outstandingBalance: 'desc' },
+    });
+
+    const enriched = customers.map((c) => {
+      const lastTx = c.incomeRecords?.[0];
+      const totalAmount = c.totalIncome || 0;
+      const amountPaid = c.totalPaid || 0;
+      return {
+        ...c,
+        totalAmount,
+        amountPaid,
+        initialTransactionDate: lastTx?.createdAt || null,
+        lastTransactionDate: lastTx?.incomeDate || null,
+      };
+    });
+
+    const totalIndebted = enriched.reduce((sum, c) => sum + (c.outstandingBalance || 0), 0);
+
+    return {
+      summary: {
+        totalIndebtedCustomers: enriched.length,
+        totalOutstandingBalance: totalIndebted,
+        totalAmountOwed: enriched.reduce((sum, c) => sum + (c.totalAmount || 0), 0),
+        totalAmountPaid: enriched.reduce((sum, c) => sum + (c.amountPaid || 0), 0),
+        averageDebt: enriched.length > 0 ? totalIndebted / enriched.length : 0,
+      },
+      customers: enriched,
+    };
   }
 }

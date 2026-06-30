@@ -13,6 +13,10 @@ router.post('/', authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT']), incomeController
 router.get('/', incomeController.getIncomes);
 router.get('/analytics', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), incomeController.getIncomeAnalytics);
 router.get('/outstanding', authorize(['ADMIN', 'CEO', 'ACCOUNTANT']), incomeController.getOutstandingInvoices);
+router.get('/modifications/pending', authorize(['CEO', 'SUPER_ADMIN']), incomeController.getPendingModificationRequests);
+router.get('/modifications/mine', incomeController.getMyModificationRequests);
+router.get('/modifications/history', authorize(['CEO', 'SUPER_ADMIN']), incomeController.getIncomeModificationHistory);
+router.post('/modifications/:requestId/approve', authorize(['CEO', 'SUPER_ADMIN']), incomeController.approveIncomeModification);
 router.get('/:id', incomeController.getIncomeById);
 router.get('/:id/invoice', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'MANAGER']), incomeController.getIncomeInvoice);
 router.put('/:id', authorize(['ADMIN', 'MANAGER', 'ACCOUNTANT']), incomeController.updateIncome);

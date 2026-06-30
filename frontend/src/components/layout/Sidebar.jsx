@@ -89,7 +89,7 @@ const Sidebar = ({ open: openProp, onClose, variant = 'permanent' }) => {
     { text: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: DASHBOARD_ALLOWED_ROLES },
     { text: 'Vehicles', path: '/vehicles', icon: CarFront },
     { text: 'My Profile', path: '/driver-profile', icon: UserCircle2, roles: ['DRIVER', 'CHIEF_DRIVER'] },
-    { text: 'Customer Entry', path: '/customers', icon: Handshake, roles: ['ADMIN', 'CEO', 'ACCOUNTANT'] },
+    { text: 'Customer Entry', path: '/customers', icon: Handshake },
     { text: 'Income Approvals', path: '/income/modifications', icon: GitCompareArrows, roles: ['CEO', 'ACCOUNTANT'] },
     { text: 'Reports', path: '/reports', icon: FileBarChart2 },
     { text: 'Transaction Log', path: '/admin/transaction-log', icon: Receipt, roles: ['CEO', 'SUPER_ADMIN'] },
