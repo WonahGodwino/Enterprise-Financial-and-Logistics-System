@@ -333,6 +333,11 @@ class ApiService {
       return fallbackResponse.data;
     }
   }
+
+  async updateVehicle(id, data) {
+    const response = await this.api.put(`/vehicles/${id}`, data);
+    return response.data;
+  }
   
   async getSubsidiaries(params) {
     const response = await this.api.get('/subsidiaries', { params });

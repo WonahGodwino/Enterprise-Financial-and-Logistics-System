@@ -215,6 +215,166 @@ export class OperationController {
     }
   });
 
+  // Transfer vehicle between subsidiaries — restricted to CEO and SUPER_ADMIN only.
+  updateVehicle = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const {
+      registrationNumber,
+      model,
+      assetType,
+      status,
+      initialOdometer,
+      subsidiaryId,
+      subsidiaryIds,
+    } = req.body;
+
+    const currentRole = String(req.user?.role || '').toUpperCase();
+    if (!['CEO', 'SUPER_ADMIN'].includes(currentRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only CEO and Super Admin can transfer vehicles between subsidiaries',
+      });
+    }
+
+    const existingVehicle = await prisma.vehicle.findUnique({
+      where: { id },
+      include: {
+        vehicleSubsidiaries: { select: { id: true, subsidiaryId: true } },
+      },
+    });
+
+    if (!existingVehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    const updateData = {};
+
+    if (registrationNumber !== undefined) {
+      updateData.registrationNumber = String(registrationNumber).trim();
+    }
+
+    if (model !== undefined) {
+      updateData.model = String(model).trim();
+    }
+
+    if (assetType !== undefined) {
+      const normalizedAssetType = String(assetType).toUpperCase();
+      const allowedAssetTypes = new Set(['SIENNA', 'COROLLA', 'OTHER']);
+      if (!allowedAssetTypes.has(normalizedAssetType)) {
+        return res.status(400).json({
+          success: false,
+          message: 'assetType must be one of SIENNA, COROLLA, OTHER',
+        });
+      }
+      updateData.assetType = normalizedAssetType;
+    }
+
+    if (status !== undefined) {
+      const normalizedStatus = String(status).toUpperCase();
+      const allowedStatuses = new Set(['ACTIVE', 'MAINTENANCE', 'INACTIVE', 'SOLD']);
+      if (!allowedStatuses.has(normalizedStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: 'status must be one of ACTIVE, MAINTENANCE, INACTIVE, SOLD',
+        });
+      }
+      updateData.status = normalizedStatus;
+    }
+
+    if (initialOdometer !== undefined) {
+      updateData.initialOdometer = initialOdometer !== null && initialOdometer !== ''
+        ? Number(initialOdometer)
+        : null;
+    }
+
+    // Handle subsidiary transfer (primary subsidiaryId + multi-subsidiary links)
+    const hasSubsidiaryUpdate = subsidiaryId !== undefined || subsidiaryIds !== undefined;
+
+    if (hasSubsidiaryUpdate) {
+      const rawIdList = Array.isArray(subsidiaryIds) && subsidiaryIds.length > 0
+        ? subsidiaryIds
+        : (subsidiaryId ? [subsidiaryId] : []);
+
+      if (rawIdList.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one subsidiary must be selected',
+        });
+      }
+
+      // CEO and SUPER_ADMIN have global access — no scope restriction needed
+      // Resolve each requested subsidiary
+      const resolvedIds = await Promise.all(
+        rawIdList.map((sid) =>
+          resolveScopedSubsidiaryId({
+            requestedSubsidiaryId: sid,
+            userSubsidiaryId: req.user?.subsidiaryId,
+            userSubsidiaryAccess: req.user?.subsidiaryAccess,
+          })
+        )
+      );
+      const uniqueResolvedIds = [...new Set(resolvedIds.filter(Boolean))];
+
+      if (uniqueResolvedIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid subsidiaries resolved',
+        });
+      }
+
+      updateData.subsidiaryId = uniqueResolvedIds[0];
+
+      // Replace existing vehicle-subsidiary links
+      await prisma.vehicleSubsidiary.deleteMany({
+        where: { vehicleId: id },
+      });
+
+      await prisma.vehicleSubsidiary.createMany({
+        data: uniqueResolvedIds.map((sid) => ({
+          vehicleId: id,
+          subsidiaryId: sid,
+        })),
+      });
+    }
+
+    try {
+      const updated = await prisma.vehicle.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          registrationNumber: true,
+          model: true,
+          assetType: true,
+          status: true,
+          subsidiaryId: true,
+          vehicleSubsidiaries: {
+            select: { subsidiaryId: true },
+          },
+          updatedAt: true,
+        },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Vehicle updated successfully',
+        data: updated,
+      });
+    } catch (error) {
+      if (error?.code === 'P2002') {
+        return res.status(409).json({
+          success: false,
+          message: 'A vehicle with this registration number already exists',
+        });
+      }
+
+      throw error;
+    }
+  });
+
   createOperation = asyncHandler(async (req, res) => {
     const { error } = validateDailyOperation(req.body);
     if (error) {

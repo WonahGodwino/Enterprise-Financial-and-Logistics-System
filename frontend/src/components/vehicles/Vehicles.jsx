@@ -18,6 +18,7 @@ import {
   Info,
   Route,
   Gauge,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
@@ -58,6 +59,19 @@ const Vehicles = () => {
     role: 'ALL',
     staffId: '',
   });
+  // Transfer vehicle state
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferringVehicle, setTransferringVehicle] = useState(null);
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState('');
+  const [transferForm, setTransferForm] = useState({
+    registrationNumber: '',
+    model: '',
+    assetType: 'OTHER',
+    status: '',
+    initialOdometer: '',
+    subsidiaryIds: [],
+  });
   const [form, setForm] = useState({
     registrationNumber: '',
     model: '',
@@ -67,6 +81,7 @@ const Vehicles = () => {
   });
 
   const canAssignVehicles = VEHICLE_ASSIGNER_ROLES.has(String(user?.role || '').toUpperCase());
+  const canTransferVehicles = canAssignVehicles; // CEO and SUPER_ADMIN only
   const canRegisterVehicle = VEHICLE_REGISTRAR_ROLES.has(String(user?.role || '').toUpperCase());
   const isDriver = String(user?.role || '').toUpperCase() === 'DRIVER';
   const isChiefDriver = String(user?.role || '').toUpperCase() === 'CHIEF_DRIVER';
@@ -347,6 +362,81 @@ const Vehicles = () => {
       await fetchVehicles();
     } catch (deassignError) {
       setAssignmentError(deassignError?.response?.data?.message || 'Vehicle de-assignment failed.');
+    }
+  };
+
+  // Transfer vehicle handlers
+  const openTransferModal = async (vehicle) => {
+    if (!canTransferVehicles) return;
+    setTransferError('');
+
+    // Load subsidiaries for the transfer form
+    if (subsidiaries.length === 0) {
+      await fetchSubsidiaries();
+    }
+
+    // Build current subsidiary IDs from the vehicle data
+    const currentSubsidiaryIds = (vehicle.vehicleSubsidiaries || [])
+      .map((vs) => vs.subsidiaryId)
+      .filter(Boolean);
+
+    setTransferringVehicle(vehicle);
+    setTransferForm({
+      registrationNumber: vehicle.registrationNumber || '',
+      model: vehicle.model || '',
+      assetType: vehicle.assetType || 'OTHER',
+      status: vehicle.status || 'ACTIVE',
+      initialOdometer: vehicle.initialOdometer != null ? String(vehicle.initialOdometer) : '',
+      subsidiaryIds: currentSubsidiaryIds.length > 0 ? currentSubsidiaryIds : [vehicle.subsidiaryId].filter(Boolean),
+    });
+    setShowTransferModal(true);
+  };
+
+  const closeTransferModal = () => {
+    setShowTransferModal(false);
+    setTransferringVehicle(null);
+    setTransferring(false);
+    setTransferError('');
+    setTransferForm({
+      registrationNumber: '',
+      model: '',
+      assetType: 'OTHER',
+      status: '',
+      initialOdometer: '',
+      subsidiaryIds: [],
+    });
+  };
+
+  const handleTransferVehicle = async (event) => {
+    event.preventDefault();
+
+    if (!transferringVehicle) return;
+
+    if (transferForm.subsidiaryIds.length === 0) {
+      setTransferError('Please select at least one subsidiary.');
+      return;
+    }
+
+    setTransferring(true);
+    setTransferError('');
+
+    try {
+      await api.updateVehicle(transferringVehicle.id, {
+        registrationNumber: transferForm.registrationNumber.trim(),
+        model: transferForm.model.trim(),
+        assetType: transferForm.assetType,
+        status: transferForm.status,
+        initialOdometer: transferForm.initialOdometer ? Number(transferForm.initialOdometer) : undefined,
+        subsidiaryId: transferForm.subsidiaryIds[0],
+        subsidiaryIds: transferForm.subsidiaryIds,
+      });
+
+      closeTransferModal();
+      await fetchVehicles();
+    } catch (err) {
+      setTransferError(err?.response?.data?.message || 'Vehicle transfer failed.');
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -920,6 +1010,13 @@ const Vehicles = () => {
                                   Deassign
                                 </button>
                               ) : null}
+                              <button
+                                type="button"
+                                onClick={() => openTransferModal(vehicle)}
+                                className="rounded-lg border border-purple-200 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-50 inline-flex items-center gap-1"
+                              >
+                                <ArrowRightLeft className="h-3 w-3" /> Transfer
+                              </button>
                             </>
                           ) : null}
 
@@ -1476,6 +1573,159 @@ const Vehicles = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Transfer Vehicle Modal — CEO & SUPER_ADMIN only */}
+      {showTransferModal && transferringVehicle ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className={`w-full max-w-xl rounded-lg shadow-xl ${mode === 'dark' ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
+            <div className={`flex items-center justify-between border-b px-6 py-4 ${mode === 'dark' ? 'border-slate-700' : 'border-gray-200'}`}>
+              <h2 className={`text-lg font-semibold ${mode === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Transfer Vehicle — {transferringVehicle.registrationNumber}
+              </h2>
+              <button
+                type="button"
+                onClick={closeTransferModal}
+                className={`rounded p-1 ${mode === 'dark' ? 'text-slate-300 hover:bg-slate-700 hover:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleTransferVehicle} className="space-y-4 px-6 py-5">
+              <div className="rounded-md bg-purple-50 px-3 py-2 text-sm text-purple-800">
+                <p className="font-medium">Current subsidiary: {transferringVehicle.subsidiary?.name || 'N/A'} ({transferringVehicle.subsidiary?.code || '—'})</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Registration Number</label>
+                  <input
+                    type="text"
+                    value={transferForm.registrationNumber}
+                    onChange={(e) => setTransferForm((prev) => ({ ...prev, registrationNumber: e.target.value }))}
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Model</label>
+                  <input
+                    type="text"
+                    value={transferForm.model}
+                    onChange={(e) => setTransferForm((prev) => ({ ...prev, model: e.target.value }))}
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Asset Type</label>
+                  <select
+                    value={transferForm.assetType}
+                    onChange={(e) => setTransferForm((prev) => ({ ...prev, assetType: e.target.value }))}
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
+                  >
+                    {assetTypes.length > 0 ? assetTypes.map((at) => (
+                      <option key={at.id} value={at.name}>{at.name}</option>
+                    )) : (
+                      <>
+                        <option value="SIENNA">SIENNA</option>
+                        <option value="COROLLA">COROLLA</option>
+                        <option value="OTHER">OTHER</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Status</label>
+                  <select
+                    value={transferForm.status}
+                    onChange={(e) => setTransferForm((prev) => ({ ...prev, status: e.target.value }))}
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="MAINTENANCE">MAINTENANCE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="SOLD">SOLD</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
+                    Transfer to Subsidiaries (Units) <span className="text-red-500">*</span>
+                  </label>
+                  {loadingSubsidiaries ? (
+                    <p className={`text-sm ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>Loading subsidiaries...</p>
+                  ) : subsidiaries.length === 0 ? (
+                    <p className={`text-sm ${mode === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>No subsidiaries available.</p>
+                  ) : (
+                    <div className={`max-h-36 overflow-y-auto rounded-lg border px-3 py-2 space-y-1 ${mode === 'dark' ? 'border-slate-600 bg-slate-700' : 'border-gray-300'}`}>
+                      {subsidiaries.map((subsidiary) => (
+                        <label key={subsidiary.id} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className={`h-4 w-4 rounded text-purple-600 focus:ring-purple-500 ${mode === 'dark' ? 'border-slate-500 bg-slate-600' : 'border-gray-300'}`}
+                            checked={transferForm.subsidiaryIds.includes(subsidiary.id)}
+                            onChange={(e) => {
+                              setTransferForm((prev) => ({
+                                ...prev,
+                                subsidiaryIds: e.target.checked
+                                  ? [...prev.subsidiaryIds, subsidiary.id]
+                                  : prev.subsidiaryIds.filter((id) => id !== subsidiary.id),
+                              }));
+                            }}
+                          />
+                          <span className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
+                            {subsidiary.name} ({subsidiary.code})
+                            {subsidiary.id === transferringVehicle.subsidiaryId ? (
+                              <span className="ml-1 text-xs text-purple-600 font-medium">(current)</span>
+                            ) : null}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={`mb-1 block text-sm font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>Initial Odometer (optional)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={transferForm.initialOdometer}
+                    onChange={(e) => setTransferForm((prev) => ({ ...prev, initialOdometer: e.target.value }))}
+                    className={`w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white placeholder:text-slate-400' : 'border-gray-300 text-gray-900'}`}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {transferError ? (
+                <p className={`rounded-md px-3 py-2 text-sm ${mode === 'dark' ? 'bg-red-900/60 text-red-200' : 'bg-red-50 text-red-700'}`}>{transferError}</p>
+              ) : null}
+
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={closeTransferModal}
+                  className={`rounded-lg border px-4 py-2 ${mode === 'dark' ? 'border-slate-600 text-slate-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={transferring || loadingSubsidiaries || subsidiaries.length === 0}
+                  className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {transferring ? 'Transferring...' : 'Transfer Vehicle'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}

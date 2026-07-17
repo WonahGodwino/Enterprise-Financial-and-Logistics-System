@@ -6,7 +6,7 @@ import { invalidateDashboardDrilldownCache } from '../utils/cacheInvalidation.js
 import prisma from '../config/database.js';
 import { EXPENSE_CATEGORIES_BY_TYPE } from '../constants/expenseCategories.js';
 
-const EXECUTIVE_STAGE_ROLES = ['CEO', 'SUPER_ADMIN'];
+const EXECUTIVE_STAGE_ROLES = ['CEO'];
 const EXECUTIVE_PRIMARY_ROLES = new Set(['ADMIN', 'CEO']);
 
 const parseAuditJson = (value) => {
@@ -25,7 +25,7 @@ const parseApprovalProgress = (expense) => {
   const approvalSteps = history.filter((entry) => entry?.kind === 'APPROVAL_STEP' && entry?.status === 'APPROVED');
   const roles = Array.isArray(workflowInit?.roles) && workflowInit.roles.length > 0
     ? workflowInit.roles
-    : ['ADMIN', 'SUPER_ADMIN', 'CEO'];
+    : ['ADMIN', 'CEO'];
   const initiatedByRole = String(workflowInit?.initiatedByRole || '').toUpperCase();
 
   const approvedStages = Number.isInteger(workflowInit?.currentStage)

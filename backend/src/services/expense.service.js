@@ -13,7 +13,7 @@ import {
 } from '../constants/expenseCategories.js';
 
 const STRICT_VEHICLE_REQUEST_ROLES = new Set(['DRIVER', 'CHIEF_DRIVER']);
-const EXECUTIVE_STAGE_ROLES = ['CEO', 'SUPER_ADMIN'];
+const EXECUTIVE_STAGE_ROLES = ['CEO'];
 const EXECUTIVE_PRIMARY_ROLES = new Set(['ADMIN', 'CEO']);
 
 export class ExpenseService {
@@ -110,7 +110,7 @@ export class ExpenseService {
       return ['CEO'];
     }
 
-    // CEO submissions stay at executive approval stage with SUPER_ADMIN as fallback.
+    // CEO submissions stay at executive approval stage.
     if (normalizedRole === 'CEO') {
       return ['CEO'];
     }
@@ -120,18 +120,18 @@ export class ExpenseService {
       return ['CHIEF_DRIVER', 'ADMIN', 'CEO'];
     }
 
-    // All other roles stay with full chain
-    const base = ['ADMIN', 'SUPER_ADMIN', 'CEO'];
+    // All other roles follow ADMIN → CEO chain (SUPER_ADMIN excluded from routing)
+    const base = ['ADMIN', 'CEO'];
     return base;
   }
 
   buildParallelRolesByStage({ requesterRole, expenseCategory }) {
     const normalizedRole = this.normalizeRole(requesterRole);
-    // CEO submissions keep CEO as primary approver while allowing SUPER_ADMIN to stand in.
+    // CEO submissions: CEO is the sole approver at executive stage.
     if (normalizedRole === 'CEO') {
       return { 0: EXECUTIVE_STAGE_ROLES };
     }
-    // Driver workflow: at the final CEO stage (index 2 after CHIEF_DRIVER→ADMIN→CEO), allow SUPER_ADMIN fallback.
+    // Driver workflow: at the final CEO stage (index 2 after CHIEF_DRIVER→ADMIN→CEO), CEO alone.
     if (normalizedRole === 'DRIVER') {
       return { 2: EXECUTIVE_STAGE_ROLES };
     }
@@ -174,7 +174,7 @@ export class ExpenseService {
 
     const roles = Array.isArray(workflowInit?.roles) && workflowInit.roles.length > 0
       ? workflowInit.roles
-      : ['ADMIN', 'SUPER_ADMIN', 'CEO'];
+      : ['ADMIN', 'CEO'];
     const currentStage = Number.isInteger(workflowInit?.currentStage)
       ? workflowInit.currentStage
       : steps.length;
