@@ -12,8 +12,10 @@ import {
   Legend,
   ArcElement,
   BarElement,
+  Filler,
 } from 'chart.js';
 import api from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 
 ChartJS.register(
   CategoryScale,
@@ -24,7 +26,8 @@ ChartJS.register(
   Tooltip,
   Legend,
   ArcElement,
-  BarElement
+  BarElement,
+  Filler
 );
 
 const PERIOD_OPTIONS = [
@@ -225,6 +228,8 @@ const buildSnapshotFromTotals = (income = 0, expenses = 0) => {
 };
 
 const Dashboard = () => {
+  const { mode } = useTheme();
+  const dm = mode === 'dark';
   const [period, setPeriod] = useState('monthly');
   const [loading, setLoading] = useState(true);
   const [focusedSection, setFocusedSection] = useState('trend');
@@ -706,75 +711,84 @@ const Dashboard = () => {
         <div
           role="button"
           tabIndex={0}
-          className="rounded-lg bg-white p-5 shadow text-left"
-          onClick={() => {
-            setFocusedSection('trend');
-          }}
+          className={dm ? 'rounded-lg bg-slate-800 p-5 shadow border border-slate-700 text-left' : 'rounded-lg bg-white p-5 shadow text-left'}
+          onClick={() => setFocusedSection('trend')}
           onContextMenu={resetDrilldown}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              setFocusedSection('trend');
-            }
-          }}
         >
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Income vs Expenses ({period})</h2>
+          <h2 className={dm ? 'mb-4 text-lg font-semibold text-slate-100' : 'mb-4 text-lg font-semibold text-gray-900'}>Income vs Expenses ({period})</h2>
+          <div className="h-72">
           <Line
             data={trendData}
             onClick={handleTrendChartClick}
             options={{
               responsive: true,
-              plugins: { legend: { position: 'bottom' } },
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { position: 'bottom', labels: { color: dm ? '#94a3b8' : '#374151', usePointStyle: true, padding: 20 } },
+                tooltip: { backgroundColor: dm ? '#1e293b' : '#fff', titleColor: dm ? '#e2e8f0' : '#111', bodyColor: dm ? '#cbd5e1' : '#374151', borderColor: dm ? '#334155' : '#e5e7eb', borderWidth: 1, padding: 12, cornerRadius: 8, callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${formatNaira(ctx.parsed.y)}` } }
+              },
+              scales: {
+                x: { grid: { color: dm ? '#334155' : '#e5e7eb' }, ticks: { color: dm ? '#94a3b8' : '#6b7280' } },
+                y: { grid: { color: dm ? '#334155' : '#e5e7eb' }, ticks: { color: dm ? '#94a3b8' : '#6b7280', callback: (v) => (v >= 1000000 ? (v / 1000000).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v) }, beginAtZero: true }
+              }
             }}
           />
+          </div>
         </div>
 
         <div
           role="button"
           tabIndex={0}
-          className="rounded-lg bg-white p-5 shadow text-left"
+          className={dm ? 'rounded-lg bg-slate-800 p-5 shadow border border-slate-700 text-left' : 'rounded-lg bg-white p-5 shadow text-left'}
           onClick={() => setFocusedSection('expenseByCategory')}
           onContextMenu={resetDrilldown}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              setFocusedSection('expenseByCategory');
-            }
-          }}
         >
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Expenses by Category</h2>
+          <h2 className={dm ? 'mb-4 text-lg font-semibold text-slate-100' : 'mb-4 text-lg font-semibold text-gray-900'}>Expenses by Category</h2>
+          <div className="h-72 flex items-center justify-center">
           <Doughnut
             data={expenseCategoryData}
             onClick={handleExpenseChartClick}
             options={{
               responsive: true,
-              plugins: { legend: { position: 'bottom' } },
+              maintainAspectRatio: false,
+              cutout: '60%',
+              plugins: {
+                legend: { position: 'bottom', labels: { color: dm ? '#94a3b8' : '#374151', usePointStyle: true, padding: 20 } },
+                tooltip: { backgroundColor: dm ? '#1e293b' : '#fff', titleColor: dm ? '#e2e8f0' : '#111', bodyColor: dm ? '#cbd5e1' : '#374151', borderColor: dm ? '#334155' : '#e5e7eb', borderWidth: 1, padding: 12, cornerRadius: 8, callbacks: { label: (ctx) => ` ${ctx.label}: ${formatNaira(ctx.parsed)}` } }
+              }
             }}
           />
+          </div>
         </div>
 
         <div
           role="button"
           tabIndex={0}
-          className="rounded-lg bg-white p-5 shadow text-left"
+          className={dm ? 'rounded-lg bg-slate-800 p-5 shadow border border-slate-700 text-left' : 'rounded-lg bg-white p-5 shadow text-left'}
           onClick={() => setFocusedSection('incomeByCustomer')}
           onContextMenu={resetDrilldown}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              setFocusedSection('incomeByCustomer');
-            }
-          }}
         >
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Income by Customer</h2>
+          <h2 className={dm ? 'mb-4 text-lg font-semibold text-slate-100' : 'mb-4 text-lg font-semibold text-gray-900'}>Income by Customer</h2>
+          <div className="h-72">
           <Bar
             data={incomeByCustomerData}
             onClick={handleIncomeChartClick}
             options={{
               responsive: true,
-              plugins: { legend: { display: false } },
+              maintainAspectRatio: false,
+              indexAxis: 'y',
+              plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: dm ? '#1e293b' : '#fff', titleColor: dm ? '#e2e8f0' : '#111', bodyColor: dm ? '#cbd5e1' : '#374151', borderColor: dm ? '#334155' : '#e5e7eb', borderWidth: 1, padding: 12, cornerRadius: 8, callbacks: { label: (ctx) => ` ${formatNaira(ctx.parsed.x)}` } }
+              },
+              scales: {
+                x: { grid: { color: dm ? '#334155' : '#e5e7eb' }, ticks: { color: dm ? '#94a3b8' : '#6b7280', callback: (v) => (v >= 1000000 ? (v / 1000000).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v) }, beginAtZero: true },
+                y: { grid: { display: false }, ticks: { color: dm ? '#94a3b8' : '#6b7280', font: { size: 11 } } }
+              }
             }}
           />
+          </div>
         </div>
       </div>
 
