@@ -25,12 +25,14 @@ export class ProfitService {
       },
     });
 
-    // Get all expenses
+    // Get only approved (non-deleted) expenses for profit calculation
     const expenses = await this.expenseRepository.findMany({
       expenseDate: {
         gte: startDate,
         lte: endDate,
       },
+      approvalStatus: 'APPROVED',
+      isDeleted: false,
     });
 
     const totalRevenue = operations.reduce((sum, op) => sum + op.income, 0);
@@ -136,6 +138,8 @@ export class ProfitService {
         }),
         this.expenseRepository.findMany({
           expenseDate: { gte: startDate, lte: endDate },
+          approvalStatus: 'APPROVED',
+          isDeleted: false,
         }),
       ]);
 
