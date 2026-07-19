@@ -165,6 +165,8 @@ const Vehicles = () => {
   // Financial date filter state (CEO / SUPER_ADMIN)
   const [finStartDate, setFinStartDate] = useState('');
   const [finEndDate, setFinEndDate] = useState('');
+  const [appliedFinStart, setAppliedFinStart] = useState('');
+  const [appliedFinEnd, setAppliedFinEnd] = useState('');
 
   useEffect(() => {
     fetchVehicles();
@@ -172,21 +174,23 @@ const Vehicles = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refetch vehicles when financial date filters change
+  // Refetch vehicles when financial date filters are applied
   useEffect(() => {
-    if (isExec) {
+    if (isExec && (appliedFinStart || appliedFinEnd)) {
       fetchVehicles();
+    } else if (isExec && !appliedFinStart && !appliedFinEnd) {
+      // Reset to all-time when both are cleared (handled by the clear button)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finStartDate, finEndDate]);
+  }, [appliedFinStart, appliedFinEnd]);
 
   const fetchVehicles = async () => {
     setLoading(true);
     setError('');
     try {
       const params = { includeInactive: true };
-      if (finStartDate) params.startDate = finStartDate;
-      if (finEndDate) params.endDate = finEndDate;
+      if (appliedFinStart) params.startDate = appliedFinStart;
+      if (appliedFinEnd) params.endDate = appliedFinEnd;
       const response = await api.getVehicles(params);
       setVehicles(response?.data || []);
     } catch (error) {
@@ -929,6 +933,7 @@ const Vehicles = () => {
                   type="date"
                   value={finStartDate}
                   onChange={(e) => setFinStartDate(e.target.value)}
+                  onBlur={() => setAppliedFinStart(finStartDate)}
                   className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   title="Finance start date"
                 />
@@ -937,13 +942,14 @@ const Vehicles = () => {
                   type="date"
                   value={finEndDate}
                   onChange={(e) => setFinEndDate(e.target.value)}
+                  onBlur={() => setAppliedFinEnd(finEndDate)}
                   className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   title="Finance end date"
                 />
                 {(finStartDate || finEndDate) ? (
                   <button
                     type="button"
-                    onClick={() => { setFinStartDate(''); setFinEndDate(''); }}
+                    onClick={() => { setFinStartDate(''); setFinEndDate(''); setAppliedFinStart(''); setAppliedFinEnd(''); fetchVehicles(); }}
                     className="rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-100"
                     title="Clear finance dates"
                   >

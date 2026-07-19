@@ -233,6 +233,8 @@ const Dashboard = () => {
   const [period, setPeriod] = useState('monthly');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [appliedStartDate, setAppliedStartDate] = useState('');
+  const [appliedEndDate, setAppliedEndDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [focusedSection, setFocusedSection] = useState('trend');
   const [drillState, setDrillState] = useState(null);
@@ -304,8 +306,8 @@ const Dashboard = () => {
     setError('');
 
     const params = { period };
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
+    if (appliedStartDate) params.startDate = appliedStartDate;
+    if (appliedEndDate) params.endDate = appliedEndDate;
 
     try {
       const [kpiResponse, trendResponse, categoryResponse, customerResponse] = await Promise.all([
@@ -316,9 +318,36 @@ const Dashboard = () => {
       ]);
 
       setKpi(kpiResponse.data);
-      setTrendData(trendResponse?.data || { labels: [], datasets: [] });
-      setExpenseCategoryData(categoryResponse?.data || { labels: [], datasets: [] });
-      setIncomeByCustomerData(customerResponse?.data || { labels: [], datasets: [] });
+
+      // Apply proper colors to chart datasets
+      const applyChartColors = (chartData) => {
+        if (!chartData?.datasets) return chartData;
+        const PALETTE = [
+          { bg: 'rgba(37, 99, 235, 0.85)', border: '#1d4ed8' },
+          { bg: 'rgba(220, 38, 38, 0.80)', border: '#b91c1c' },
+          { bg: 'rgba(16, 185, 129, 0.80)', border: '#059669' },
+          { bg: 'rgba(245, 158, 11, 0.80)', border: '#d97706' },
+          { bg: 'rgba(139, 92, 246, 0.80)', border: '#7c3aed' },
+          { bg: 'rgba(236, 72, 153, 0.80)', border: '#db2777' },
+          { bg: 'rgba(14, 165, 233, 0.80)', border: '#0284c7' },
+          { bg: 'rgba(168, 85, 247, 0.80)', border: '#9333ea' },
+          { bg: 'rgba(34, 197, 94, 0.80)', border: '#16a34a' },
+          { bg: 'rgba(251, 146, 60, 0.80)', border: '#ea580c' },
+        ];
+        return {
+          ...chartData,
+          datasets: chartData.datasets.map((ds, i) => ({
+            ...ds,
+            backgroundColor: ds.backgroundColor || (ds.data || []).map((_, j) => PALETTE[j % PALETTE.length].bg),
+            borderColor: ds.borderColor || (ds.data || []).map((_, j) => PALETTE[j % PALETTE.length].border),
+            borderWidth: ds.borderWidth || 1,
+          })),
+        };
+      };
+
+      setTrendData(applyChartColors(trendResponse?.data || { labels: [], datasets: [] }));
+      setExpenseCategoryData(applyChartColors(categoryResponse?.data || { labels: [], datasets: [] }));
+      setIncomeByCustomerData(applyChartColors(customerResponse?.data || { labels: [], datasets: [] }));
 
       const [subsidiaryResult, incomeResult, expenseResult] = await Promise.allSettled([
         api.getSubsidiaries(),
@@ -346,7 +375,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [period, startDate, endDate]);
+  }, [period, appliedStartDate, appliedEndDate]);
 
   useEffect(() => {
     loadDashboard();
@@ -354,7 +383,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     setDrillState(null);
-  }, [period, startDate, endDate]);
+  }, [period, appliedStartDate, appliedEndDate]);
 
   const resetDrilldown = useCallback((event) => {
     if (event?.preventDefault) {
@@ -396,7 +425,7 @@ const Dashboard = () => {
     } finally {
       setDrilldownLoading(false);
     }
-  }, [period, startDate, endDate]);
+  }, [period]);
 
   const handleIncomeChartClick = useCallback(async (event, elements = []) => {
     if (!elements.length) {
@@ -580,6 +609,7 @@ const Dashboard = () => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              onBlur={() => setAppliedStartDate(startDate)}
               className="rounded-lg border border-gray-200 px-2 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               title="Start date"
             />
@@ -588,13 +618,14 @@ const Dashboard = () => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              onBlur={() => setAppliedEndDate(endDate)}
               className="rounded-lg border border-gray-200 px-2 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               title="End date"
             />
             {(startDate || endDate) ? (
               <button
                 type="button"
-                onClick={() => { setStartDate(''); setEndDate(''); }}
+                onClick={() => { setStartDate(''); setEndDate(''); setAppliedStartDate(''); setAppliedEndDate(''); }}
                 className="rounded-lg px-2 py-2 text-sm text-gray-500 hover:bg-gray-100"
                 title="Clear dates"
               >
