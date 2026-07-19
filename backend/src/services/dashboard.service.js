@@ -69,7 +69,18 @@ class DashboardService {
       .sort((a, b) => b.value - a.value);
   }
 
-  getRangeFromPeriod(period = 'monthly') {
+  getRangeFromPeriod(period = 'monthly', options = {}) {
+    const { startDate, endDate } = options;
+
+    // If explicit date range is provided, use it
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate) : new Date(0);
+      const end = endDate ? new Date(endDate) : new Date();
+      // For custom ranges, default to day-level bucket
+      const bucket = 'day';
+      return { start, end, bucket };
+    }
+
     const now = new Date();
     const normalized = String(period || 'monthly').toLowerCase();
 
@@ -199,8 +210,8 @@ class DashboardService {
     return { online: 0, offline: 0 };
   }
 
-  async getKPISummary(period = 'month') {
-    const { start, end } = this.getRangeFromPeriod(period);
+  async getKPISummary(period = 'month', dateOptions = {}) {
+    const { start, end } = this.getRangeFromPeriod(period, dateOptions);
 
     const [incomeAgg, expenseAgg, topCustomerRows, topExpenseRows] = await Promise.all([
       prisma.incomeRecord.aggregate({
@@ -278,9 +289,9 @@ class DashboardService {
     };
   }
 
-  async getChartData(metric, period = 'month') {
+  async getChartData(metric, period = 'month', dateOptions = {}) {
     const selectedMetric = metric || 'income-expense-trend';
-    const { start, end, bucket } = this.getRangeFromPeriod(period);
+    const { start, end, bucket } = this.getRangeFromPeriod(period, dateOptions);
 
     if (selectedMetric === 'expenses-by-category') {
       const rows = await prisma.expense.groupBy({

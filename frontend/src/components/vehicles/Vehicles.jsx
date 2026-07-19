@@ -936,6 +936,14 @@ const Vehicles = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Created
                   </th>
+                  {isExec ? (
+                    <>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Revenue</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Fuel</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Total Expenses</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Net Income</th>
+                    </>
+                  ) : null}
                   {(canAssignVehicles || isDriver || canViewDetails) ? (
                     <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                       Action
@@ -989,6 +997,26 @@ const Vehicles = () => {
                         {vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : 'N/A'}
                       </div>
                     </td>
+                    {isExec ? (
+                      <>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-mono text-gray-900">
+                          {vehicle._finance ? `₦${vehicle._finance.revenue.toLocaleString()}` : '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-mono text-amber-700">
+                          {vehicle._finance ? `₦${vehicle._finance.fuel.toLocaleString()}` : '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-mono text-red-700">
+                          {vehicle._finance ? `₦${vehicle._finance.totalExpenses.toLocaleString()}` : '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-mono font-semibold">
+                          {vehicle._finance ? (
+                            <span className={vehicle._finance.netIncome >= 0 ? 'text-green-700' : 'text-red-700'}>
+                              ₦{vehicle._finance.netIncome.toLocaleString()}
+                            </span>
+                          ) : '—'}
+                        </td>
+                      </>
+                    ) : null}
                     {(canAssignVehicles || isDriver || canViewDetails) ? (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1050,7 +1078,7 @@ const Vehicles = () => {
 
                 {filteredVehicles.length === 0 && (
                   <tr>
-                    <td colSpan={(canAssignVehicles || isDriver || canViewDetails) ? 7 : 6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={isExec ? 11 : ((canAssignVehicles || isDriver || canViewDetails) ? 7 : 6)} className="px-6 py-12 text-center text-gray-500">
                       <Truck className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                       <p>No vehicles found</p>
                     </td>

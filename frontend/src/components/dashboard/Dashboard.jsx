@@ -231,6 +231,8 @@ const Dashboard = () => {
   const { mode } = useTheme();
   const dm = mode === 'dark';
   const [period, setPeriod] = useState('monthly');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [focusedSection, setFocusedSection] = useState('trend');
   const [drillState, setDrillState] = useState(null);
@@ -301,12 +303,16 @@ const Dashboard = () => {
     setLoading(true);
     setError('');
 
+    const params = { period };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
     try {
       const [kpiResponse, trendResponse, categoryResponse, customerResponse] = await Promise.all([
-        api.getDashboardKPI({ period }),
-        api.getDashboardCharts({ period, metric: CHART_METRICS.trend }),
-        api.getDashboardCharts({ period, metric: CHART_METRICS.expenseByCategory }),
-        api.getDashboardCharts({ period, metric: CHART_METRICS.incomeByCustomer }),
+        api.getDashboardKPI(params),
+        api.getDashboardCharts({ ...params, metric: CHART_METRICS.trend }),
+        api.getDashboardCharts({ ...params, metric: CHART_METRICS.expenseByCategory }),
+        api.getDashboardCharts({ ...params, metric: CHART_METRICS.incomeByCustomer }),
       ]);
 
       setKpi(kpiResponse.data);
@@ -340,7 +346,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, startDate, endDate]);
 
   useEffect(() => {
     loadDashboard();
@@ -348,7 +354,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     setDrillState(null);
-  }, [period]);
+  }, [period, startDate, endDate]);
 
   const resetDrilldown = useCallback((event) => {
     if (event?.preventDefault) {
@@ -390,7 +396,7 @@ const Dashboard = () => {
     } finally {
       setDrilldownLoading(false);
     }
-  }, [period]);
+  }, [period, startDate, endDate]);
 
   const handleIncomeChartClick = useCallback(async (event, elements = []) => {
     if (!elements.length) {
@@ -569,6 +575,33 @@ const Dashboard = () => {
               {option.label}
             </button>
           ))}
+          <div className="flex items-center gap-1">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="rounded-lg border border-gray-200 px-2 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Start date"
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="rounded-lg border border-gray-200 px-2 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="End date"
+            />
+            {(startDate || endDate) ? (
+              <button
+                type="button"
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                className="rounded-lg px-2 py-2 text-sm text-gray-500 hover:bg-gray-100"
+                title="Clear dates"
+              >
+                ✕
+              </button>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={loadDashboard}

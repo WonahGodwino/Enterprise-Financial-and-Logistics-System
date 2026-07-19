@@ -144,8 +144,8 @@ export class DashboardController {
    */
   async getKPISummary(req, res, next) {
     try {
-      const { period = 'monthly' } = req.query;
-      const kpis = await dashboardService.getKPISummary(period);
+      const { period = 'monthly', startDate, endDate } = req.query;
+      const kpis = await dashboardService.getKPISummary(period, { startDate, endDate });
       
       res.status(200).json({
         success: true,
@@ -162,9 +162,9 @@ export class DashboardController {
   async getChartData(req, res, next) {
     try {
       const metric = req.params.metric || req.query.metric || 'income-expense-trend';
-      const { period = 'monthly' } = req.query;
+      const { period = 'monthly', startDate, endDate } = req.query;
       
-      const chartData = await dashboardService.getChartData(metric, period);
+      const chartData = await dashboardService.getChartData(metric, period, { startDate, endDate });
       
       res.status(200).json({
         success: true,

@@ -624,6 +624,9 @@ export class OperationController {
             code: true,
           },
         },
+        vehicleSubsidiaries: {
+          select: { subsidiaryId: true },
+        },
         assignment: {
           select: {
             id: true,
@@ -656,6 +659,58 @@ export class OperationController {
         registrationNumber: 'asc',
       },
     });
+
+    // Attach financial metrics for CEO / SUPER_ADMIN
+    const isGlobalExec = hasGlobalSubsidiaryAccess(req.user?.role);
+    if (isGlobalExec && vehicles.length > 0) {
+      const vehicleIds = vehicles.map((v) => v.id);
+
+      const [revenueRows, fuelRows, expenseRows] = await Promise.all([
+        // Revenue from DailyOperation
+        prisma.dailyOperation.groupBy({
+          by: ['vehicleId'],
+          where: { vehicleId: { in: vehicleIds } },
+          _sum: { income: true },
+        }),
+        // Fuel expenses (approved)
+        prisma.expense.groupBy({
+          by: ['vehicleId'],
+          where: {
+            vehicleId: { in: vehicleIds },
+            expenseCategory: 'FUEL',
+            approvalStatus: 'APPROVED',
+            isDeleted: false,
+          },
+          _sum: { amount: true },
+        }),
+        // Total approved expenses
+        prisma.expense.groupBy({
+          by: ['vehicleId'],
+          where: {
+            vehicleId: { in: vehicleIds },
+            approvalStatus: 'APPROVED',
+            isDeleted: false,
+          },
+          _sum: { amount: true },
+        }),
+      ]);
+
+      const revenueMap = new Map(revenueRows.map((r) => [r.vehicleId, r._sum.income || 0]));
+      const fuelMap = new Map(fuelRows.map((r) => [r.vehicleId, r._sum.amount || 0]));
+      const expenseMap = new Map(expenseRows.map((r) => [r.vehicleId, r._sum.amount || 0]));
+
+      for (const vehicle of vehicles) {
+        const revenue = revenueMap.get(vehicle.id) || 0;
+        const fuel = fuelMap.get(vehicle.id) || 0;
+        const totalExpenses = expenseMap.get(vehicle.id) || 0;
+        vehicle._finance = {
+          revenue,
+          fuel,
+          totalExpenses,
+          netIncome: revenue - totalExpenses,
+        };
+      }
+    }
 
     res.status(200).json({
       success: true,
