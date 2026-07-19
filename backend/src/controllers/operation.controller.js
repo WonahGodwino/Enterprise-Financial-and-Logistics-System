@@ -677,6 +677,11 @@ export class OperationController {
         operationDateWhere.operationDate = dateFilter;
       }
 
+      const incomeDateWhere = { vehicleId: { in: vehicleIds } };
+      if (Object.keys(dateFilter).length > 0) {
+        incomeDateWhere.incomeDate = dateFilter;
+      }
+
       const expenseDateWhere = {
         vehicleId: { in: vehicleIds },
         approvalStatus: 'APPROVED',
@@ -686,17 +691,26 @@ export class OperationController {
         expenseDateWhere.expenseDate = dateFilter;
       }
 
-      const [revenueRows, fuelRows, expenseRows] = await Promise.all([
+      const [operationRows, incomeRows, fuelRows, expenseRows] = await Promise.all([
+        // Revenue from DailyOperation (driver trip income)
         prisma.dailyOperation.groupBy({
           by: ['vehicleId'],
           where: operationDateWhere,
           _sum: { income: true },
         }),
+        // Revenue from IncomeRecord (formal income entries linked to vehicles)
+        prisma.incomeRecord.groupBy({
+          by: ['vehicleId'],
+          where: incomeDateWhere,
+          _sum: { netAmount: true, amount: true },
+        }),
+        // Fuel expenses (approved)
         prisma.expense.groupBy({
           by: ['vehicleId'],
           where: { ...expenseDateWhere, expenseCategory: 'FUEL' },
           _sum: { amount: true },
         }),
+        // Total approved expenses
         prisma.expense.groupBy({
           by: ['vehicleId'],
           where: expenseDateWhere,
@@ -704,7 +718,16 @@ export class OperationController {
         }),
       ]);
 
-      const revenueMap = new Map(revenueRows.map((r) => [r.vehicleId, r._sum.income || 0]));
+      // Combine revenue from both DailyOperation and IncomeRecord
+      const revenueMap = new Map();
+      for (const row of operationRows) {
+        revenueMap.set(row.vehicleId, (revenueMap.get(row.vehicleId) || 0) + (row._sum.income || 0));
+      }
+      for (const row of incomeRows) {
+        const incomeRevenue = row._sum.netAmount || row._sum.amount || 0;
+        revenueMap.set(row.vehicleId, (revenueMap.get(row.vehicleId) || 0) + incomeRevenue);
+      }
+
       const fuelMap = new Map(fuelRows.map((r) => [r.vehicleId, r._sum.amount || 0]));
       const expenseMap = new Map(expenseRows.map((r) => [r.vehicleId, r._sum.amount || 0]));
 
