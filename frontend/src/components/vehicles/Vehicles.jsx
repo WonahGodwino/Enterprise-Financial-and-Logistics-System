@@ -1049,6 +1049,134 @@ const Vehicles = () => {
         </div>
       </div>
 
+      {/* Vehicle Financial Breakdown — CEO & SUPER_ADMIN */}
+      {isExec ? (
+        <div className={`rounded-lg shadow overflow-hidden ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
+          <button
+            type="button"
+            onClick={() => setShowFinBreakdown((v) => !v)}
+            className={`w-full flex items-center justify-between px-6 py-4 border-b ${dm ? 'border-slate-700 hover:bg-slate-700/50' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            <div className="flex items-center gap-3">
+              <BarChart3 className={`h-5 w-5 ${dm ? 'text-purple-400' : 'text-purple-600'}`} />
+              <h2 className={`text-base font-semibold ${dm ? 'text-slate-100' : 'text-gray-800'}`}>Vehicle Financial Breakdown</h2>
+            </div>
+            {showFinBreakdown ? <ChevronUp className={`h-5 w-5 ${dm ? 'text-slate-400' : 'text-gray-500'}`} /> : <ChevronDown className={`h-5 w-5 ${dm ? 'text-slate-400' : 'text-gray-500'}`} />}
+          </button>
+
+          {showFinBreakdown ? (
+            <div className="px-6 py-5 space-y-6">
+              {/* Vehicle Filter */}
+              <div className="flex flex-wrap items-center gap-4">
+                <label className={`text-sm font-medium ${dm ? 'text-slate-200' : 'text-gray-700'}`}>Filter by Vehicle:</label>
+                <select
+                  value={finVehicleFilter}
+                  onChange={(e) => setFinVehicleFilter(e.target.value)}
+                  className={`rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${dm ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
+                >
+                  <option value="ALL">All Vehicles</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>{v.registrationNumber} — {v.model}</option>
+                  ))}
+                </select>
+                <span className={`text-xs ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
+                  Showing {finBreakdownData.vehicleCount} vehicle{finBreakdownData.vehicleCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/50 border border-slate-600' : 'bg-blue-50'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className={`h-4 w-4 ${dm ? 'text-blue-400' : 'text-blue-600'}`} />
+                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Revenue</p>
+                  </div>
+                  <p className={`text-xl font-bold ${dm ? 'text-blue-400' : 'text-blue-700'}`}>{formatNaira(finBreakdownData.totalRevenue)}</p>
+                </div>
+                <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/50 border border-slate-600' : 'bg-amber-50'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className={`h-4 w-4 ${dm ? 'text-amber-400' : 'text-amber-600'}`} />
+                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Fuel</p>
+                  </div>
+                  <p className={`text-xl font-bold ${dm ? 'text-amber-400' : 'text-amber-700'}`}>{formatNaira(finBreakdownData.totalFuel)}</p>
+                </div>
+                <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/50 border border-slate-600' : 'bg-red-50'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className={`h-4 w-4 ${dm ? 'text-red-400' : 'text-red-600'}`} />
+                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Total Expenses</p>
+                  </div>
+                  <p className={`text-xl font-bold ${dm ? 'text-red-400' : 'text-red-700'}`}>{formatNaira(finBreakdownData.totalExpenses)}</p>
+                </div>
+                <div className={`rounded-lg p-4 ${finBreakdownData.netIncome >= 0 ? (dm ? 'bg-slate-700/50 border border-green-600' : 'bg-green-50') : (dm ? 'bg-slate-700/50 border border-red-600' : 'bg-red-50')}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className={`h-4 w-4 ${finBreakdownData.netIncome >= 0 ? (dm ? 'text-green-400' : 'text-green-600') : (dm ? 'text-red-400' : 'text-red-600')}`} />
+                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Net Income</p>
+                  </div>
+                  <p className={`text-xl font-bold ${finBreakdownData.netIncome >= 0 ? (dm ? 'text-green-400' : 'text-green-700') : (dm ? 'text-red-400' : 'text-red-700')}`}>{formatNaira(finBreakdownData.netIncome)}</p>
+                </div>
+              </div>
+
+              {/* Bar Chart */}
+              <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
+                <div className="h-80">
+                  {finBreakdownData.labels.length > 0 ? (
+                    <Bar
+                      data={{ labels: finBreakdownData.labels, datasets: finBreakdownData.datasets }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                          legend: {
+                            position: 'bottom',
+                            labels: {
+                              color: dm ? '#94a3b8' : '#374151',
+                              usePointStyle: true,
+                              padding: 20,
+                              font: { size: 12 },
+                            },
+                          },
+                          tooltip: {
+                            backgroundColor: dm ? '#1e293b' : '#fff',
+                            titleColor: dm ? '#e2e8f0' : '#111',
+                            bodyColor: dm ? '#cbd5e1' : '#374151',
+                            borderColor: dm ? '#334155' : '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                              label: (ctx) => ` ${ctx.dataset.label}: ${formatNaira(ctx.parsed.y)}`,
+                            },
+                          },
+                        },
+                        scales: {
+                          x: {
+                            grid: { color: dm ? '#334155' : '#e5e7eb' },
+                            ticks: { color: dm ? '#94a3b8' : '#6b7280', font: { size: 11 } },
+                          },
+                          y: {
+                            grid: { color: dm ? '#334155' : '#e5e7eb' },
+                            ticks: {
+                              color: dm ? '#94a3b8' : '#6b7280',
+                              callback: (v) => (v >= 1000000 ? (v / 1000000).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v),
+                            },
+                            beginAtZero: true,
+                          },
+                        },
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-500'}`}>No financial data available for the selected vehicles.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Vehicles Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
@@ -1231,134 +1359,6 @@ const Vehicles = () => {
           </div>
         )}
       </div>
-
-      {/* Vehicle Financial Breakdown — CEO & SUPER_ADMIN */}
-      {isExec ? (
-        <div className={`rounded-lg shadow overflow-hidden ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
-          <button
-            type="button"
-            onClick={() => setShowFinBreakdown((v) => !v)}
-            className={`w-full flex items-center justify-between px-6 py-4 border-b ${dm ? 'border-slate-700 hover:bg-slate-700/50' : 'border-gray-200 hover:bg-gray-50'}`}
-          >
-            <div className="flex items-center gap-3">
-              <BarChart3 className={`h-5 w-5 ${dm ? 'text-purple-400' : 'text-purple-600'}`} />
-              <h2 className={`text-base font-semibold ${dm ? 'text-slate-100' : 'text-gray-800'}`}>Vehicle Financial Breakdown</h2>
-            </div>
-            {showFinBreakdown ? <ChevronUp className={`h-5 w-5 ${dm ? 'text-slate-400' : 'text-gray-500'}`} /> : <ChevronDown className={`h-5 w-5 ${dm ? 'text-slate-400' : 'text-gray-500'}`} />}
-          </button>
-
-          {showFinBreakdown ? (
-            <div className="px-6 py-5 space-y-6">
-              {/* Vehicle Filter */}
-              <div className="flex flex-wrap items-center gap-4">
-                <label className={`text-sm font-medium ${dm ? 'text-slate-200' : 'text-gray-700'}`}>Filter by Vehicle:</label>
-                <select
-                  value={finVehicleFilter}
-                  onChange={(e) => setFinVehicleFilter(e.target.value)}
-                  className={`rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${dm ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
-                >
-                  <option value="ALL">All Vehicles</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>{v.registrationNumber} — {v.model}</option>
-                  ))}
-                </select>
-                <span className={`text-xs ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
-                  Showing {finBreakdownData.vehicleCount} vehicle{finBreakdownData.vehicleCount !== 1 ? 's' : ''}
-                </span>
-              </div>
-
-              {/* KPI Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/50 border border-slate-600' : 'bg-blue-50'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp className={`h-4 w-4 ${dm ? 'text-blue-400' : 'text-blue-600'}`} />
-                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Revenue</p>
-                  </div>
-                  <p className={`text-xl font-bold ${dm ? 'text-blue-400' : 'text-blue-700'}`}>{formatNaira(finBreakdownData.totalRevenue)}</p>
-                </div>
-                <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/50 border border-slate-600' : 'bg-amber-50'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className={`h-4 w-4 ${dm ? 'text-amber-400' : 'text-amber-600'}`} />
-                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Fuel</p>
-                  </div>
-                  <p className={`text-xl font-bold ${dm ? 'text-amber-400' : 'text-amber-700'}`}>{formatNaira(finBreakdownData.totalFuel)}</p>
-                </div>
-                <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/50 border border-slate-600' : 'bg-red-50'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className={`h-4 w-4 ${dm ? 'text-red-400' : 'text-red-600'}`} />
-                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Total Expenses</p>
-                  </div>
-                  <p className={`text-xl font-bold ${dm ? 'text-red-400' : 'text-red-700'}`}>{formatNaira(finBreakdownData.totalExpenses)}</p>
-                </div>
-                <div className={`rounded-lg p-4 ${finBreakdownData.netIncome >= 0 ? (dm ? 'bg-slate-700/50 border border-green-600' : 'bg-green-50') : (dm ? 'bg-slate-700/50 border border-red-600' : 'bg-red-50')}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp className={`h-4 w-4 ${finBreakdownData.netIncome >= 0 ? (dm ? 'text-green-400' : 'text-green-600') : (dm ? 'text-red-400' : 'text-red-600')}`} />
-                    <p className={`text-xs font-medium ${dm ? 'text-slate-300' : 'text-gray-600'}`}>Net Income</p>
-                  </div>
-                  <p className={`text-xl font-bold ${finBreakdownData.netIncome >= 0 ? (dm ? 'text-green-400' : 'text-green-700') : (dm ? 'text-red-400' : 'text-red-700')}`}>{formatNaira(finBreakdownData.netIncome)}</p>
-                </div>
-              </div>
-
-              {/* Bar Chart */}
-              <div className={`rounded-lg p-4 ${dm ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
-                <div className="h-80">
-                  {finBreakdownData.labels.length > 0 ? (
-                    <Bar
-                      data={{ labels: finBreakdownData.labels, datasets: finBreakdownData.datasets }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                          legend: {
-                            position: 'bottom',
-                            labels: {
-                              color: dm ? '#94a3b8' : '#374151',
-                              usePointStyle: true,
-                              padding: 20,
-                              font: { size: 12 },
-                            },
-                          },
-                          tooltip: {
-                            backgroundColor: dm ? '#1e293b' : '#fff',
-                            titleColor: dm ? '#e2e8f0' : '#111',
-                            bodyColor: dm ? '#cbd5e1' : '#374151',
-                            borderColor: dm ? '#334155' : '#e5e7eb',
-                            borderWidth: 1,
-                            padding: 12,
-                            cornerRadius: 8,
-                            callbacks: {
-                              label: (ctx) => ` ${ctx.dataset.label}: ${formatNaira(ctx.parsed.y)}`,
-                            },
-                          },
-                        },
-                        scales: {
-                          x: {
-                            grid: { color: dm ? '#334155' : '#e5e7eb' },
-                            ticks: { color: dm ? '#94a3b8' : '#6b7280', font: { size: 11 } },
-                          },
-                          y: {
-                            grid: { color: dm ? '#334155' : '#e5e7eb' },
-                            ticks: {
-                              color: dm ? '#94a3b8' : '#6b7280',
-                              callback: (v) => (v >= 1000000 ? (v / 1000000).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(0) + 'K' : v),
-                            },
-                            beginAtZero: true,
-                          },
-                        },
-                      }}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <p className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-500'}`}>No financial data available for the selected vehicles.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       {showAddModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
