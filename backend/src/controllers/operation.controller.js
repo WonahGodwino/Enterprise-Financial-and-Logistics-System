@@ -511,6 +511,8 @@ export class OperationController {
     const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
     const requestedSubsidiaryId = normalizeInput(req.query.subsidiaryId);
     const currentRole = String(req.user?.role || '').toUpperCase();
+    const startDate = req.query.startDate || null;
+    const endDate = req.query.endDate || null;
 
     const primaryId = req.user?.subsidiaryId;
     const accessArr = Array.isArray(req.user?.subsidiaryAccess) ? req.user.subsidiaryAccess : [];
@@ -665,32 +667,39 @@ export class OperationController {
     if (isGlobalExec && vehicles.length > 0) {
       const vehicleIds = vehicles.map((v) => v.id);
 
+      // Build date filter for financial aggregation
+      const dateFilter = {};
+      if (startDate) dateFilter.gte = new Date(startDate);
+      if (endDate) dateFilter.lte = new Date(endDate);
+
+      const operationDateWhere = { vehicleId: { in: vehicleIds } };
+      if (Object.keys(dateFilter).length > 0) {
+        operationDateWhere.operationDate = dateFilter;
+      }
+
+      const expenseDateWhere = {
+        vehicleId: { in: vehicleIds },
+        approvalStatus: 'APPROVED',
+        isDeleted: false,
+      };
+      if (Object.keys(dateFilter).length > 0) {
+        expenseDateWhere.expenseDate = dateFilter;
+      }
+
       const [revenueRows, fuelRows, expenseRows] = await Promise.all([
-        // Revenue from DailyOperation
         prisma.dailyOperation.groupBy({
           by: ['vehicleId'],
-          where: { vehicleId: { in: vehicleIds } },
+          where: operationDateWhere,
           _sum: { income: true },
         }),
-        // Fuel expenses (approved)
         prisma.expense.groupBy({
           by: ['vehicleId'],
-          where: {
-            vehicleId: { in: vehicleIds },
-            expenseCategory: 'FUEL',
-            approvalStatus: 'APPROVED',
-            isDeleted: false,
-          },
+          where: { ...expenseDateWhere, expenseCategory: 'FUEL' },
           _sum: { amount: true },
         }),
-        // Total approved expenses
         prisma.expense.groupBy({
           by: ['vehicleId'],
-          where: {
-            vehicleId: { in: vehicleIds },
-            approvalStatus: 'APPROVED',
-            isDeleted: false,
-          },
+          where: expenseDateWhere,
           _sum: { amount: true },
         }),
       ]);

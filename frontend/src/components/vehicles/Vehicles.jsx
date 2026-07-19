@@ -162,16 +162,32 @@ const Vehicles = () => {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState('');
 
+  // Financial date filter state (CEO / SUPER_ADMIN)
+  const [finStartDate, setFinStartDate] = useState('');
+  const [finEndDate, setFinEndDate] = useState('');
+
   useEffect(() => {
     fetchVehicles();
     fetchAssetTypes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refetch vehicles when financial date filters change
+  useEffect(() => {
+    if (isExec) {
+      fetchVehicles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finStartDate, finEndDate]);
 
   const fetchVehicles = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.getVehicles({ includeInactive: true });
+      const params = { includeInactive: true };
+      if (finStartDate) params.startDate = finStartDate;
+      if (finEndDate) params.endDate = finEndDate;
+      const response = await api.getVehicles(params);
       setVehicles(response?.data || []);
     } catch (error) {
       console.error('Error fetching vehicles:', error);
@@ -904,6 +920,39 @@ const Vehicles = () => {
             <Filter className="h-4 w-4 mr-2" />
             More Filters
           </button>
+
+          {isExec ? (
+            <>
+              <div className="border-l border-gray-300 pl-4 flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-medium">Financial:</span>
+                <input
+                  type="date"
+                  value={finStartDate}
+                  onChange={(e) => setFinStartDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  title="Finance start date"
+                />
+                <span className="text-gray-400 text-xs">to</span>
+                <input
+                  type="date"
+                  value={finEndDate}
+                  onChange={(e) => setFinEndDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  title="Finance end date"
+                />
+                {(finStartDate || finEndDate) ? (
+                  <button
+                    type="button"
+                    onClick={() => { setFinStartDate(''); setFinEndDate(''); }}
+                    className="rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-100"
+                    title="Clear finance dates"
+                  >
+                    ✕
+                  </button>
+                ) : null}
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 
