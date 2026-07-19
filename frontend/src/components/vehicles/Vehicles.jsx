@@ -792,7 +792,7 @@ const Vehicles = () => {
     <div className="pt-16 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Vehicle Fleet</h1>
+        <h1 className={`text-2xl font-bold ${dm ? 'text-white' : 'text-gray-800'}`}>Vehicle Fleet</h1>
         <div className="flex items-center space-x-3">
           {canViewStatusRequests ? (
             <button
@@ -808,7 +808,7 @@ const Vehicles = () => {
               {showRequestsPanel ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
             </button>
           ) : null}
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center">
+          <button className={`px-4 py-2 rounded-lg flex items-center ${dm ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </button>
@@ -826,17 +826,17 @@ const Vehicles = () => {
 
       {/* Status Requests Panel */}
       {showRequestsPanel ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h2 className="text-base font-semibold text-gray-800">Vehicle Status Requests</h2>
+        <div className={`rounded-lg shadow overflow-hidden ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
+          <div className={`flex items-center justify-between px-6 py-4 border-b ${dm ? 'border-slate-700' : 'border-gray-200'}`}>
+            <h2 className={`text-base font-semibold ${dm ? 'text-slate-100' : 'text-gray-800'}`}>Vehicle Status Requests</h2>
             {loadingRequests ? (
-              <span className="text-sm text-gray-500">Loading…</span>
+              <span className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-500'}`}>Loading…</span>
             ) : (
               <button onClick={fetchStatusRequests} className="text-sm text-red-600 hover:underline">Refresh</button>
             )}
           </div>
           {statusRequests.length === 0 && !loadingRequests ? (
-            <div className="px-6 py-8 text-center text-gray-500 text-sm">No status requests found.</div>
+            <div className={`px-6 py-8 text-center text-sm ${dm ? 'text-slate-400' : 'text-gray-500'}`}>No status requests found.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -861,9 +861,9 @@ const Vehicles = () => {
                     const hasLinkedExpense = Boolean(req.expense?.id);
                     const expenseStageLabel = getExpenseStageLabel(req.expense);
                     return (
-                      <tr key={req.id} className="hover:bg-gray-50">
+                      <tr key={req.id} className={`${dm ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'}`}>
                         <td className={`px-4 py-3 font-mono font-medium ${mode === 'dark' ? 'text-slate-200' : 'text-gray-800'}`}>{req.vehicle?.registrationNumber}</td>
-                        <td className="px-4 py-3 text-gray-700">{req.requester?.fullName}</td>
+                        <td className={`px-4 py-3 ${dm ? 'text-slate-300' : 'text-gray-700'}`}>{req.requester?.fullName}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${req.targetStatus === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                             {req.targetStatus}
@@ -875,8 +875,8 @@ const Vehicles = () => {
                           {req.status === 'APPROVED' && <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" /> Approved</span>}
                           {req.status === 'REJECTED' && <span className="flex items-center gap-1 text-red-600"><XCircle className="h-3 w-3" /> Rejected</span>}
                         </td>
-                        <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{req.reason}</td>
-                        <td className="px-4 py-3 text-gray-500">{new Date(req.createdAt).toLocaleDateString()}</td>
+                        <td className={`px-4 py-3 max-w-xs truncate ${dm ? 'text-slate-300' : 'text-gray-600'}`}>{req.reason}</td>
+                        <td className={`px-4 py-3 ${dm ? 'text-slate-400' : 'text-gray-500'}`}>{new Date(req.createdAt).toLocaleDateString()}</td>
                         {(isChiefDriver || isExec || isAdmin) ? (
                           <td className="px-4 py-3">
                             {(canChiefReview || canExecReview) ? (
@@ -906,7 +906,7 @@ const Vehicles = () => {
                                       requestId: req.id,
                                     },
                                   })}
-                                  className="rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                  className={`rounded border px-2 py-1 text-xs font-medium ${dm ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                                 >
                                   View Expense
                                 </button>
@@ -926,55 +926,55 @@ const Vehicles = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className={`rounded-lg shadow p-6 ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Vehicles</p>
-              <p className="text-2xl font-bold text-gray-800">{vehicles.length}</p>
+              <p className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-600'}`}>Total Vehicles</p>
+              <p className={`text-2xl font-bold ${dm ? 'text-white' : 'text-gray-800'}`}>{vehicles.length}</p>
             </div>
-            <div className="bg-red-100 p-3 rounded-full">
-              <Truck className="h-6 w-6 text-red-600" />
+            <div className={`p-3 rounded-full ${dm ? 'bg-red-900/40' : 'bg-red-100'}`}>
+              <Truck className={`h-6 w-6 ${dm ? 'text-red-400' : 'text-red-600'}`} />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className={`rounded-lg shadow p-6 ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active</p>
+              <p className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-600'}`}>Active</p>
               <p className="text-2xl font-bold text-green-600">
                 {vehicles.filter(v => v.status === 'ACTIVE').length}
               </p>
             </div>
-            <div className="bg-green-100 p-3 rounded-full">
+            <div className={`p-3 rounded-full ${dm ? 'bg-green-900/40' : 'bg-green-100'}`}>
               <Truck className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className={`rounded-lg shadow p-6 ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">In Maintenance</p>
+              <p className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-600'}`}>In Maintenance</p>
               <p className="text-2xl font-bold text-yellow-600">
                 {vehicles.filter(v => v.status === 'MAINTENANCE').length}
               </p>
             </div>
-            <div className="bg-yellow-100 p-3 rounded-full">
+            <div className={`p-3 rounded-full ${dm ? 'bg-yellow-900/40' : 'bg-yellow-100'}`}>
               <Wrench className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className={`rounded-lg shadow p-6 ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Out of Service</p>
+              <p className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-600'}`}>Out of Service</p>
               <p className="text-2xl font-bold text-red-600">
                 {vehicles.filter(v => v.status === 'INACTIVE' || v.status === 'SOLD').length}
               </p>
             </div>
-            <div className="bg-red-100 p-3 rounded-full">
+            <div className={`p-3 rounded-full ${dm ? 'bg-red-900/40' : 'bg-red-100'}`}>
               <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
           </div>
@@ -982,7 +982,7 @@ const Vehicles = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className={`rounded-lg shadow p-4 ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -991,14 +991,14 @@ const Vehicles = () => {
               placeholder="Search vehicles..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              className={`w-full pl-10 pr-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${dm ? 'bg-slate-700 border border-slate-600 text-white placeholder:text-slate-400' : 'border border-gray-300 text-gray-900'}`}
             />
           </div>
 
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+            className={`rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${dm ? 'bg-slate-700 border border-slate-600 text-white' : 'border border-gray-300 text-gray-900'}`}
           >
             <option value="ALL">All Status</option>
             <option value="ACTIVE">Active</option>
@@ -1007,21 +1007,21 @@ const Vehicles = () => {
             <option value="SOLD">Sold</option>
           </select>
 
-          <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center">
+          <button className={`px-4 py-2 rounded-lg flex items-center ${dm ? 'bg-slate-700 text-slate-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
             <Filter className="h-4 w-4 mr-2" />
             More Filters
           </button>
 
           {isExec ? (
             <>
-              <div className="border-l border-gray-300 pl-4 flex items-center gap-2">
+              <div className={`border-l pl-4 flex items-center gap-2 ${dm ? 'border-slate-600' : 'border-gray-300'}`}>
                 <span className="text-xs text-gray-500 font-medium">Financial:</span>
                 <input
                   type="date"
                   value={finStartDate}
                   onChange={(e) => setFinStartDate(e.target.value)}
                   onBlur={() => setAppliedFinStart(finStartDate)}
-                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${dm ? 'bg-slate-700 border border-slate-600 text-white' : 'border border-gray-300 text-gray-700'}`}
                   title="Finance start date"
                 />
                 <span className="text-gray-400 text-xs">to</span>
@@ -1178,7 +1178,7 @@ const Vehicles = () => {
       ) : null}
 
       {/* Vehicles Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className={`rounded-lg shadow overflow-hidden ${dm ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
@@ -1221,19 +1221,19 @@ const Vehicles = () => {
                   ) : null}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className={`divide-y ${dm ? 'divide-slate-700' : 'divide-gray-200'}`}>
                 {filteredVehicles.map((vehicle) => (
-                  <tr key={vehicle.id} className="hover:bg-gray-50">
+                  <tr key={vehicle.id} className={`hover:bg-opacity-50 ${dm ? 'hover:bg-slate-700' : 'hover:bg-gray-50'}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
                           <Truck className="h-5 w-5 text-gray-600" />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className={`text-sm font-medium ${dm ? 'text-slate-100' : 'text-gray-900'}`}>
                             {vehicle.model}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className={`text-sm ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                             {vehicle.assetType}
                           </div>
                         </div>
@@ -1249,21 +1249,21 @@ const Vehicles = () => {
                         {String(vehicle.status || '').replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {vehicle.assetType}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {vehicle.assignment?.staff ? (
                         <div className="text-sm">
-                          <div className="font-medium text-gray-900">{vehicle.assignment.staff.fullName}</div>
-                          <div className="text-gray-500">{vehicle.assignment.staff.role}</div>
+                          <div className={`font-medium ${dm ? 'text-slate-100' : 'text-gray-900'}`}>{vehicle.assignment.staff.fullName}</div>
+                          <div className={`${dm ? 'text-slate-400' : 'text-gray-500'}`}>{vehicle.assignment.staff.role}</div>
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-500">Not assigned</span>
+                        <span className={`text-sm ${dm ? 'text-slate-500' : 'text-gray-500'}`}>Not assigned</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className={`text-sm ${dm ? 'text-slate-300' : 'text-gray-900'}`}>
                         {vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleDateString() : 'N/A'}
                       </div>
                     </td>
@@ -1303,7 +1303,7 @@ const Vehicles = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleDeassignVehicle(vehicle.id)}
-                                  className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                  className={`rounded-lg border px-3 py-1 text-xs font-medium ${dm ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                                 >
                                   Deassign
                                 </button>
@@ -1348,7 +1348,7 @@ const Vehicles = () => {
 
                 {filteredVehicles.length === 0 && (
                   <tr>
-                    <td colSpan={isExec ? 11 : ((canAssignVehicles || isDriver || canViewDetails) ? 7 : 6)} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={isExec ? 11 : ((canAssignVehicles || isDriver || canViewDetails) ? 7 : 6)} className={`px-6 py-12 text-center ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                       <Truck className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                       <p>No vehicles found</p>
                     </td>
@@ -1588,7 +1588,7 @@ const Vehicles = () => {
                 <button
                   type="button"
                   onClick={closeAssignModal}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  className={`rounded-lg border px-4 py-2 ${dm ? 'border-slate-600 text-slate-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                 >
                   Cancel
                 </button>
@@ -1653,7 +1653,7 @@ const Vehicles = () => {
               ) : null}
 
               <div className="flex items-center justify-end gap-3 pt-1">
-                <button type="button" onClick={closeStatusRequestModal} className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <button type="button" onClick={closeStatusRequestModal} className={`rounded-lg border px-4 py-2 ${dm ? 'border-slate-600 text-slate-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                   Cancel
                 </button>
                 <button
@@ -1719,7 +1719,7 @@ const Vehicles = () => {
               ) : null}
 
               <div className="flex items-center justify-end gap-3 pt-1">
-                <button type="button" onClick={closeReviewModal} className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <button type="button" onClick={closeReviewModal} className={`rounded-lg border px-4 py-2 ${dm ? 'border-slate-600 text-slate-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                   Cancel
                 </button>
                 <button
@@ -1754,54 +1754,54 @@ const Vehicles = () => {
                 </button>
               </div>
 
-              <div className="px-6 py-5 space-y-6">
+              <div className={`px-6 py-5 space-y-6 ${dm ? 'text-slate-200' : ''}`}>
                 {loadingDetail ? (
                   <div className="flex items-center justify-center py-6">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
                   </div>
                 ) : (
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 flex items-center gap-2 ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                       <Gauge className="h-4 w-4" /> Odometer Summary
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div className="rounded-lg bg-gray-50 p-4 text-center">
-                        <p className="text-xs text-gray-500 mb-1">At Registration</p>
-                        <p className="text-xl font-bold text-gray-800">
+                      <div className={`rounded-lg p-4 text-center ${dm ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+                        <p className={`text-xs mb-1 ${dm ? 'text-slate-400' : 'text-gray-500'}`}>At Registration</p>
+                        <p className={`text-xl font-bold ${dm ? 'text-white' : 'text-gray-800'}`}>
                           {vehicleDetail?.initialOdometer != null ? vehicleDetail.initialOdometer.toLocaleString() : '—'}
                         </p>
-                        <p className="text-xs text-gray-400">km</p>
+                        <p className={`text-xs ${dm ? 'text-slate-500' : 'text-gray-400'}`}>km</p>
                       </div>
-                      <div className="rounded-lg bg-blue-50 p-4 text-center">
+                      <div className={`rounded-lg p-4 text-center ${dm ? 'bg-blue-900/30' : 'bg-blue-50'}`}>
                         <p className="text-xs text-blue-600 mb-1">Total Distance</p>
-                        <p className="text-xl font-bold text-blue-700">
+                        <p className={`text-xl font-bold ${dm ? 'text-blue-400' : 'text-blue-700'}`}>
                           {vehicleDetail ? vehicleDetail.totalDistanceCoveredKm.toLocaleString() : '—'}
                         </p>
                         <p className="text-xs text-blue-400">km covered</p>
                       </div>
-                      <div className="rounded-lg bg-red-50 p-4 text-center">
+                      <div className={`rounded-lg p-4 text-center ${dm ? 'bg-red-900/30' : 'bg-red-50'}`}>
                         <p className="text-xs text-red-600 mb-1">Current Odometer</p>
-                        <p className="text-xl font-bold text-red-700">
+                        <p className={`text-xl font-bold ${dm ? 'text-red-400' : 'text-red-700'}`}>
                           {vehicleDetail ? vehicleDetail.currentOdometer.toLocaleString() : '—'}
                         </p>
                         <p className="text-xs text-red-400">km total</p>
                       </div>
-                      <div className="rounded-lg bg-green-50 p-4 text-center">
+                      <div className={`rounded-lg p-4 text-center ${dm ? 'bg-green-900/30' : 'bg-green-50'}`}>
                         <p className="text-xs text-green-600 mb-1">Total Trips</p>
-                        <p className="text-xl font-bold text-green-700">
+                        <p className={`text-xl font-bold ${dm ? 'text-green-400' : 'text-green-700'}`}>
                           {vehicleDetail ? vehicleDetail.totalTrips : '—'}
                         </p>
                         <p className="text-xs text-green-400">logged trips</p>
                       </div>
                     </div>
                     {vehicleDetail?.assignment?.staff ? (
-                      <div className="mt-4 rounded-lg border border-gray-200 px-4 py-3 flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <Truck className="h-4 w-4 text-gray-500" />
+                      <div className={`mt-4 rounded-lg border px-4 py-3 flex items-center gap-3 ${dm ? 'border-slate-600 bg-slate-700/50' : 'border-gray-200'}`}>
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 ${dm ? 'bg-slate-600' : 'bg-gray-100'}`}>
+                          <Truck className={`h-4 w-4 ${dm ? 'text-slate-300' : 'text-gray-500'}`} />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-800">Assigned to {vehicleDetail.assignment.staff.fullName}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className={`text-sm font-medium ${dm ? 'text-slate-100' : 'text-gray-800'}`}>Assigned to {vehicleDetail.assignment.staff.fullName}</p>
+                          <p className={`text-xs ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                             {vehicleDetail.assignment.staff.role} · Since {vehicleDetail.assignment.assignedAt ? new Date(vehicleDetail.assignment.assignedAt).toLocaleDateString('en-NG') : '—'}
                           </p>
                         </div>
@@ -1811,7 +1811,7 @@ const Vehicles = () => {
                 )}
 
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 flex items-center gap-2 ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                     <Route className="h-4 w-4" /> Trip Log History
                   </h3>
                   {loadingDetailLogs ? (
@@ -1819,9 +1819,9 @@ const Vehicles = () => {
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
                     </div>
                   ) : vehicleDetailLogs.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-6">No trip logs recorded for this vehicle.</p>
+                    <p className={`text-sm text-center py-6 ${dm ? 'text-slate-400' : 'text-gray-500'}`}>No trip logs recorded for this vehicle.</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <div className={`overflow-x-auto rounded-lg border ${dm ? 'border-slate-600' : 'border-gray-200'}`}>
                       <table className="w-full text-sm">
                         <thead className="bg-red-600">
                           <tr>
@@ -1834,26 +1834,26 @@ const Vehicles = () => {
                             <th className="px-3 py-2 text-right text-xs font-medium text-white uppercase">Odometer</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className={`divide-y ${dm ? 'divide-slate-700' : 'divide-gray-100'}`}>
                           {vehicleDetailLogs.map((log) => (
-                            <tr key={log.id} className="hover:bg-gray-50">
-                              <td className="px-3 py-2 font-medium text-gray-800">{log.driver?.fullName ?? '—'}</td>
-                              <td className="px-3 py-2 text-gray-700">
+                            <tr key={log.id} className={`${dm ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'}`}>
+                              <td className={`px-3 py-2 font-medium ${dm ? 'text-slate-100' : 'text-gray-800'}`}>{log.driver?.fullName ?? '—'}</td>
+                              <td className={`px-3 py-2 ${dm ? 'text-slate-300' : 'text-gray-700'}`}>
                                 {log.startPoint} <span className="text-gray-400">→</span> {log.destination}
                               </td>
-                              <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
+                              <td className={`px-3 py-2 whitespace-nowrap ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                                 {new Date(log.departureAt).toLocaleString('en-NG', { dateStyle: 'short', timeStyle: 'short' })}
                               </td>
-                              <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
+                              <td className={`px-3 py-2 whitespace-nowrap ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                                 {new Date(log.arrivalAt).toLocaleString('en-NG', { dateStyle: 'short', timeStyle: 'short' })}
                               </td>
-                              <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                              <td className={`px-3 py-2 whitespace-nowrap ${dm ? 'text-slate-300' : 'text-gray-700'}`}>
                                 {formatTripDuration(log.departureAt, log.arrivalAt)}
                               </td>
-                              <td className="px-3 py-2 text-right font-semibold text-blue-700">
+                              <td className="px-3 py-2 text-right text-blue-700">
                                 {log.distanceCoveredKm.toLocaleString()} km
                               </td>
-                              <td className="px-3 py-2 text-right text-gray-500">
+                              <td className={`px-3 py-2 text-right ${dm ? 'text-slate-400' : 'text-gray-500'}`}>
                                 {log.initialOdometer.toLocaleString()} → {log.destinationOdometer.toLocaleString()}
                               </td>
                             </tr>
@@ -1866,7 +1866,7 @@ const Vehicles = () => {
               </div>
 
               <div className="flex justify-end border-t border-gray-200 px-6 py-4">
-                <button type="button" onClick={closeDetailModal} className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                <button type="button" onClick={closeDetailModal} className={`rounded-lg border px-4 py-2 text-sm ${dm ? 'border-slate-600 text-slate-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
                   Close
                 </button>
               </div>
