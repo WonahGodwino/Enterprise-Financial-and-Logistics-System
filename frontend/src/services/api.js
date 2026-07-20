@@ -77,6 +77,15 @@ class ApiService {
     );
   }
 
+  // Generic API methods for ad-hoc endpoints
+  async get(url, config = {}) {
+    return this.api.get(url, config);
+  }
+
+  async post(url, data, config = {}) {
+    return this.api.post(url, data, config);
+  }
+
   // Auth
   async login(email, password) {
     const response = await this.api.post('/auth/login', { email, password });

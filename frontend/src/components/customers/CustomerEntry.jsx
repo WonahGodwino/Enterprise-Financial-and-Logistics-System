@@ -130,11 +130,13 @@ const CustomerEntry = () => {
   const fetchCountries = useCallback(async () => {
     setCountryLoading(true);
     try {
-      const response = await fetch('https://restcountries.com/v3.1/all?fields=name');
-      const data = await response.json();
-      const names = data.map((c) => c.name.common).sort();
-      if (!names.includes('Nigeria')) names.unshift('Nigeria');
-      setCountryOptions(names);
+      const response = await api.get('/locations/countries');
+      const names = response.data?.data || [];
+      if (names.length > 0) {
+        setCountryOptions(names);
+      } else {
+        setCountryOptions(['Nigeria']);
+      }
     } catch (_err) {
       setCountryOptions(['Nigeria']);
     } finally {
@@ -146,13 +148,9 @@ const CustomerEntry = () => {
     if (!countryName) { setStateOptions([]); return; }
     setStateLoading(true);
     try {
-      const response = await fetch('https://countriesnow.space/api/v0.1/countries/states', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ country: countryName }),
-      });
-      const data = await response.json();
-      setStateOptions((data?.data?.states || []).map((s) => s.name).sort());
+      const response = await api.post('/locations/states', { country: countryName });
+      const states = response.data?.data || [];
+      setStateOptions(states.length > 0 ? states : []);
     } catch (_err) {
       setStateOptions([]);
     } finally {
