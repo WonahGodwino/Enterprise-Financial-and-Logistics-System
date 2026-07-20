@@ -365,7 +365,7 @@ router.post('/locations/states', asyncHandler(async (req, res) => {
 }));
 
 // Subsidiaries routes
-router.get('/subsidiaries', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN']), asyncHandler(async (req, res) => {
+router.get('/subsidiaries', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN', 'EMPLOYEE', 'SUPERVISOR', 'AUDITOR', 'HR', 'VIEWER']), asyncHandler(async (req, res) => {
   const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
   const currentRole = String(req.user?.role || '').toUpperCase();
 
