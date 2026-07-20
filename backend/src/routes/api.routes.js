@@ -311,7 +311,10 @@ router.get('/subsidiaries', authorize(['DRIVER', 'CHIEF_DRIVER', 'ADMIN', 'MANAG
   const currentRole = String(req.user?.role || '').toUpperCase();
 
   const where = includeInactive ? {} : { isActive: true };
-  if (currentRole === 'CHIEF_DRIVER' || currentRole === 'DRIVER') {
+
+  // CEO and SUPER_ADMIN see all subsidiaries; all other roles see only their assigned subsidiaries
+  const GLOBAL_ROLES = new Set(['CEO', 'SUPER_ADMIN']);
+  if (!GLOBAL_ROLES.has(currentRole)) {
     const scopedIds = [
       req.user?.subsidiaryId,
       ...(Array.isArray(req.user?.subsidiaryAccess) ? req.user.subsidiaryAccess : []),
