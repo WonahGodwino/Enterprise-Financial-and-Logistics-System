@@ -1803,6 +1803,7 @@ const Expenses = () => {
                     <DatePicker
                       value={newExpense.requestedDate ? new Date(newExpense.requestedDate) : null}
                       onChange={(date) => setNewExpense((prev) => ({ ...prev, requestedDate: date ? date.toISOString().slice(0, 10) : '' }))}
+                      disableFuture
                       slotProps={{
                         textField: {
                           size: 'small',
@@ -1833,6 +1834,7 @@ const Expenses = () => {
                     <DatePicker
                       value={newExpense.expenseDate ? new Date(newExpense.expenseDate) : null}
                       onChange={(date) => setNewExpense((prev) => ({ ...prev, expenseDate: date ? date.toISOString().slice(0, 10) : '' }))}
+                      disableFuture
                       slotProps={{
                         textField: {
                           size: 'small',

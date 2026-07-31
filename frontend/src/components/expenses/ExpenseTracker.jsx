@@ -814,6 +814,7 @@ export const ExpenseTracker = () => {
                     label="Expense Date *"
                     value={formik.values.expenseDate}
                     onChange={(date) => formik.setFieldValue('expenseDate', date)}
+                    disableFuture
                     renderInput={(params) => (
                       <TextField
                         {...params}
