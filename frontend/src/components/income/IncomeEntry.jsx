@@ -178,13 +178,18 @@ const IncomeEntry = () => {
   const loadIncomes = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const res = await api.getIncomes({ page, limit: INCOME_RECORDS_PER_PAGE });
+      const params = { page, limit: INCOME_RECORDS_PER_PAGE };
+      if (summaryRange.startDate && summaryRange.endDate && summaryRange.startDate <= summaryRange.endDate) {
+        params.startDate = summaryRange.startDate;
+        params.endDate = summaryRange.endDate;
+      }
+      const res = await api.getIncomes(params);
       const records = Array.isArray(res?.data) ? res.data : [];
       const pag = res?.pagination || {};
       setIncomes(records);
       setIncomePagination({ page: Number(pag.page) || page, limit: Number(pag.limit) || INCOME_RECORDS_PER_PAGE, total: Number(pag.total) || records.length, pages: Number(pag.pages) || 1 });
     } catch (err) { showToast(err?.response?.data?.message || 'Failed to load income records', 'error'); } finally { setLoading(false); }
-  }, [showToast]);
+  }, [showToast, summaryRange.startDate, summaryRange.endDate]);
   const loadMonthlyTotals = useCallback(async () => {
     if (!summaryRange.startDate || !summaryRange.endDate || summaryRange.startDate > summaryRange.endDate) { setMonthlyTotals({ totalIncome: 0, paidIncome: 0, pendingIncome: 0 }); return; }
     try {

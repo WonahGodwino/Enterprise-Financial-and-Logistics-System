@@ -75,6 +75,8 @@ export class CustomerController {
       status,
       search,
       subsidiaryId,
+      startDate,
+      endDate,
     } = req.query;
 
     const where = {};
@@ -87,6 +89,12 @@ export class CustomerController {
 
     if (type) where.customerType = type;
     if (status) where.status = status;
+    if (startDate && endDate) {
+      where.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate + 'T23:59:59.999Z'),
+      };
+    }
     if (search) {
       where.OR = [
         { companyName: { contains: search, mode: 'insensitive' } },

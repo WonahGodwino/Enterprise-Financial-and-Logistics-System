@@ -76,6 +76,8 @@ const CustomerEntry = () => {
     type: '',
     status: '',
     subsidiaryId: '',
+    startDate: '',
+    endDate: '',
   });
 
   const [formData, setFormData] = useState(defaultForm);
@@ -177,14 +179,19 @@ const CustomerEntry = () => {
     setLoading(true);
 
     try {
-      const response = await api.getCustomers({
+      const params = {
         page: 1,
         limit: 100,
         search: currentFilters?.search || undefined,
         type: currentFilters?.type || undefined,
         status: currentFilters?.status || undefined,
         subsidiaryId: currentFilters?.subsidiaryId || undefined,
-      });
+      };
+      if (currentFilters?.startDate && currentFilters?.endDate) {
+        params.startDate = currentFilters.startDate;
+        params.endDate = currentFilters.endDate;
+      }
+      const response = await api.getCustomers(params);
       setCustomers(response?.data || []);
     } catch (err) {
       showToast(toErrorMessage(err, 'Failed to load customers'), 'error');
@@ -803,6 +810,14 @@ const CustomerEntry = () => {
                 <option key={status} value={status}>{status}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <p className={c('mb-1 text-xs text-gray-500','mb-1 text-xs text-slate-400')}>From</p>
+            <input name="startDate" type="date" value={filters.startDate} onChange={handleFilterChange} className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm`,`rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100`)} />
+          </div>
+          <div>
+            <p className={c('mb-1 text-xs text-gray-500','mb-1 text-xs text-slate-400')}>To</p>
+            <input name="endDate" type="date" value={filters.endDate} onChange={handleFilterChange} className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm`,`rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100`)} />
           </div>
           <button onClick={() => loadCustomers(filters)} className={c(`rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50`,`rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700`)}>
             Apply Filters

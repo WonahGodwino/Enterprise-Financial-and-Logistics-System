@@ -331,7 +331,12 @@ const Expenses = () => {
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      const response = await api.getExpenses({ page: 1, limit: 100 });
+      const params = { page: 1, limit: 100 };
+      if (summaryRange.startDate && summaryRange.endDate && summaryRange.startDate <= summaryRange.endDate) {
+        params.startDate = summaryRange.startDate;
+        params.endDate = summaryRange.endDate;
+      }
+      const response = await api.getExpenses(params);
       setExpenses(response?.data || []);
       await loadExpenseSummaryTotals();
     } catch (error) {
