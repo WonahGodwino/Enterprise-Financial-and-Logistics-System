@@ -25,6 +25,9 @@ import {
   DEFAULT_EXPENSE_TYPE,
   VEHICLE_RELATED_EXPENSE_CATEGORIES,
 } from '../../constants/expenseCategories';
+import { DatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers';
 
 const formatExpenseOptionLabel = (value) => {
   if (value === 'ADVERTISEMENT_AND_SIGNAGE') return 'Advertisement and Signage';
@@ -1796,24 +1799,62 @@ const Expenses = () => {
 
                 <label className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Date Requested
-                  <input
-                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
-                    type="date"
-                    value={newExpense.requestedDate}
-                    onChange={(e) => setNewExpense((prev) => ({ ...prev, requestedDate: e.target.value }))}
-                    required
-                  />
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      value={newExpense.requestedDate ? new Date(newExpense.requestedDate) : null}
+                      onChange={(date) => setNewExpense((prev) => ({ ...prev, requestedDate: date ? date.toISOString().slice(0, 10) : '' }))}
+                      slotProps={{
+                        textField: {
+                          size: 'small',
+                          fullWidth: true,
+                          required: true,
+                          sx: {
+                            mt: 0.5,
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px',
+                              ...(mode === 'dark' ? {
+                                backgroundColor: '#334155',
+                                '& fieldset': { borderColor: '#475569' },
+                                '& input': { color: '#fff' },
+                                '& .MuiInputLabel-root': { color: '#94a3b8' },
+                                '& .MuiSvgIcon-root': { color: '#94a3b8' },
+                              } : {}),
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </LocalizationProvider>
                 </label>
 
                 <label className={`text-sm ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
                   Date of Expense
-                  <input
-                    className={`mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mode === 'dark' ? 'border-slate-600 bg-slate-700 text-white' : 'border-gray-300 text-gray-900'}`}
-                    type="date"
-                    value={newExpense.expenseDate}
-                    onChange={(e) => setNewExpense((prev) => ({ ...prev, expenseDate: e.target.value }))}
-                    required
-                  />
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      value={newExpense.expenseDate ? new Date(newExpense.expenseDate) : null}
+                      onChange={(date) => setNewExpense((prev) => ({ ...prev, expenseDate: date ? date.toISOString().slice(0, 10) : '' }))}
+                      slotProps={{
+                        textField: {
+                          size: 'small',
+                          fullWidth: true,
+                          required: true,
+                          sx: {
+                            mt: 0.5,
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px',
+                              ...(mode === 'dark' ? {
+                                backgroundColor: '#334155',
+                                '& fieldset': { borderColor: '#475569' },
+                                '& input': { color: '#fff' },
+                                '& .MuiInputLabel-root': { color: '#94a3b8' },
+                                '& .MuiSvgIcon-root': { color: '#94a3b8' },
+                              } : {}),
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </LocalizationProvider>
                 </label>
 
                 <label className={`text-sm md:col-span-2 ${mode === 'dark' ? 'text-slate-200' : 'text-gray-700'}`}>
