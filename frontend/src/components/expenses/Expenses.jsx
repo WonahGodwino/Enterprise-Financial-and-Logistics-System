@@ -81,6 +81,10 @@ const Expenses = () => {
       return { ...prev, endDate: nextEnd };
     });
   };
+  const applyDateFilter = () => {
+    fetchExpenses();
+    loadExpenseSummaryTotals();
+  };
   const [summaryTotals, setSummaryTotals] = useState({
     total: 0,
     pendingApproval: 0,
@@ -1119,6 +1123,7 @@ const Expenses = () => {
                 value={summaryRange.startDate}
                 max={summaryRange.endDate}
                 onChange={(event) => handleSummaryStartDateChange(event.target.value)}
+                onBlur={applyDateFilter}
                 className="rounded-lg border border-gray-300 px-3 py-2"
               />
             </label>
@@ -1129,13 +1134,14 @@ const Expenses = () => {
                 value={summaryRange.endDate}
                 min={summaryRange.startDate}
                 onChange={(event) => handleSummaryEndDateChange(event.target.value)}
+                onBlur={applyDateFilter}
                 className="rounded-lg border border-gray-300 px-3 py-2"
               />
             </label>
             {(summaryRange.startDate || summaryRange.endDate) ? (
               <button
                 type="button"
-                onClick={() => { handleSummaryStartDateChange(''); handleSummaryEndDateChange(''); }}
+                onClick={() => { handleSummaryStartDateChange(''); handleSummaryEndDateChange(''); setTimeout(applyDateFilter, 50); }}
                 className="mt-5 rounded-lg px-2 py-2 text-sm text-gray-500 hover:bg-gray-100"
                 title="Clear dates"
               >
