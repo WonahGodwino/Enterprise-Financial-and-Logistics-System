@@ -219,7 +219,9 @@ const Expenses = () => {
 
   useEffect(() => {
     loadExpenseSummaryTotals();
-  }, [summaryRange.endDate, summaryRange.startDate]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchExpenses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summaryRange.endDate, summaryRange.startDate]);
 
   useEffect(() => {
     if (isExpenseApprover) {
