@@ -7,7 +7,6 @@ import {
   Search,
   Edit,
   Trash2,
-  Filter,
   Download,
   FileText,
   CheckCircle,
@@ -65,7 +64,6 @@ const Expenses = () => {
   }, []);
   const [expenses, setExpenses] = useState([]);
   const [summaryRange, setSummaryRange] = useState(defaultSummaryRange);
-  const [showSummaryRangeControls, setShowSummaryRangeControls] = useState(false);
   const handleSummaryStartDateChange = (value) => {
     setSummaryRange((prev) => {
       const nextStart = value || prev.startDate;
@@ -1111,20 +1109,9 @@ const Expenses = () => {
             <option value="rejected">Rejected</option>
           </select>
 
-          <button
-            type="button"
-            onClick={() => setShowSummaryRangeControls((prev) => !prev)}
-            className={`px-4 py-2 rounded-lg flex items-center ${showSummaryRangeControls ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            {showSummaryRangeControls ? 'Hide Date Range' : 'Date Range'}
-          </button>
-        </div>
-
-        {showSummaryRangeControls && (
-          <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="flex items-center gap-2">
             <label className="text-sm">
-              <span className="mb-1 block text-gray-700">Start Date</span>
+              <span className="mb-1 block text-gray-700">From</span>
               <input
                 type="date"
                 value={summaryRange.startDate}
@@ -1134,7 +1121,7 @@ const Expenses = () => {
               />
             </label>
             <label className="text-sm">
-              <span className="mb-1 block text-gray-700">End Date</span>
+              <span className="mb-1 block text-gray-700">To</span>
               <input
                 type="date"
                 value={summaryRange.endDate}
@@ -1143,8 +1130,18 @@ const Expenses = () => {
                 className="rounded-lg border border-gray-300 px-3 py-2"
               />
             </label>
+            {(summaryRange.startDate || summaryRange.endDate) ? (
+              <button
+                type="button"
+                onClick={() => { handleSummaryStartDateChange(''); handleSummaryEndDateChange(''); }}
+                className="mt-5 rounded-lg px-2 py-2 text-sm text-gray-500 hover:bg-gray-100"
+                title="Clear dates"
+              >
+                ✕
+              </button>
+            ) : null}
           </div>
-        )}
+        </div>
       </div>
 
       {isExpenseApprover && (
