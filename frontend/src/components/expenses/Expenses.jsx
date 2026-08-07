@@ -82,7 +82,7 @@ const Expenses = () => {
     });
   };
   const applyDateFilter = () => {
-    fetchExpenses();
+    fetchExpenses(1);
     loadExpenseSummaryTotals();
   };
   const [summaryTotals, setSummaryTotals] = useState({
@@ -332,10 +332,11 @@ const Expenses = () => {
     }
   }, [showViewModal]);
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (page = currentPage) => {
     setLoading(true);
+    setCurrentPage(page);
     try {
-      const params = { page: 1, limit: 100 };
+      const params = { page: 1, limit: 5000 };
       if (summaryRange.startDate && summaryRange.endDate && summaryRange.startDate <= summaryRange.endDate) {
         params.startDate = summaryRange.startDate;
         params.endDate = summaryRange.endDate;
