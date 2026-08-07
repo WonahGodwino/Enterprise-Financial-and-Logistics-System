@@ -102,7 +102,7 @@ function App() {
 
                     {/* Income Entry */}
                     <Route path="income" element={
-                      <PrivateRoute requiredRoles={['ADMIN', 'CEO', 'SUPER_ADMIN', 'ACCOUNTANT']}>
+                      <PrivateRoute requiredRoles={['ADMIN', 'CEO', 'SUPER_ADMIN', 'ACCOUNTANT', 'EMPLOYEE']}>
                         <IncomeEntry />
                       </PrivateRoute>
                     } />

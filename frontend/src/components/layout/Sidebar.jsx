@@ -104,7 +104,7 @@ const Sidebar = ({ open: openProp, onClose, variant = 'permanent' }) => {
     : [
         { text: 'Expenses', path: '/expenses', icon: Wallet },
         { text: 'Expense Approvals', path: '/expenses/approvals', icon: BadgeCheck, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN', 'CHIEF_DRIVER'] },
-        { text: 'Income Entry', path: '/income', icon: TrendingUp, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN', 'ACCOUNTANT'] },
+        { text: 'Income Entry', path: '/income', icon: TrendingUp, roles: ['ADMIN', 'CEO', 'SUPER_ADMIN', 'ACCOUNTANT', 'EMPLOYEE'] },
         { text: 'My Income Modification Request', path: '/income/my-requests', icon: GitCompareArrows, roles: ['ADMIN', 'MANAGER'] },
         { text: 'Profit', path: '/profit', icon: TrendingUp, roles: ['ADMIN', 'MANAGER', 'ACCOUNTANT', 'CEO', 'SUPER_ADMIN'] },
       ];

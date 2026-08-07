@@ -894,17 +894,17 @@ router.put('/asset-types/:id', authorize(['ADMIN', 'CEO', 'SUPER_ADMIN']), async
 }));
 
 // Income routes
-router.post('/income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.recordIncome);
-router.get('/income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.getIncomes);
+router.post('/income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN', 'EMPLOYEE']), incomeController.recordIncome);
+router.get('/income', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN', 'EMPLOYEE']), incomeController.getIncomes);
 router.get('/income/analytics', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.getIncomeAnalytics);
 router.get('/income/outstanding', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.getOutstandingInvoices);
 router.get('/income/modifications/mine', authorize(['ADMIN', 'MANAGER', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.getMyModificationRequests);
 router.get('/income/modifications/pending', authorize(['CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.getPendingModificationRequests);
 router.get('/income/modifications/history', authorize(['CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.getIncomeModificationHistory);
 router.post('/income/modifications/:requestId/approve', authorize(['CEO', 'ACCOUNTANT', 'SUPER_ADMIN']), incomeController.approveIncomeModification);
-router.get('/income/:id', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN']), incomeController.getIncomeById);
+router.get('/income/:id', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN', 'EMPLOYEE']), incomeController.getIncomeById);
 router.get('/income/:id/invoice', authorize(['ADMIN', 'CEO', 'ACCOUNTANT', 'MANAGER', 'SUPER_ADMIN']), incomeController.getIncomeInvoice);
-router.put('/income/:id', authorize(['ADMIN', 'MANAGER', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN']), incomeController.updateIncome);
+router.put('/income/:id', authorize(['ADMIN', 'MANAGER', 'CEO', 'ACCOUNTANT', 'SUPER_ADMIN', 'EMPLOYEE']), incomeController.updateIncome);
 router.post('/income/:id/mark-paid', authorize(['ADMIN', 'CEO', 'ACCOUNTANT','SUPER_ADMIN']), incomeController.markAsPaid);
 router.post('/income/:id/pay', authorize(['ADMIN', 'CEO', 'SUPER_ADMIN']), incomeController.recordPayment);
 router.delete('/income/:id', authorize(['ADMIN','CEO','SUPER_ADMIN']), incomeController.deleteIncome);
