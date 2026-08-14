@@ -626,13 +626,33 @@ export class IncomeController {
     const mergedIncomeState = { ...income, ...changes };
     const derivedTotals = this.incomeService.deriveIncomeTotals(mergedIncomeState);
     const nextAmount = derivedTotals.amount;
-    const nextTaxAmount = Object.prototype.hasOwnProperty.call(changes, 'taxAmount') ? changes.taxAmount : income.taxAmount;
-    const nextDiscountAmount = Object.prototype.hasOwnProperty.call(changes, 'discountAmount') ? changes.discountAmount : income.discountAmount;
+    const nextTaxAmount = Object.prototype.hasOwnProperty.call(changes, 'taxAmount')
+      ? changes.taxAmount
+      : (derivedTotals.taxAmount ?? income.taxAmount ?? 0);
+    const nextDiscountAmount = Object.prototype.hasOwnProperty.call(changes, 'discountAmount')
+      ? changes.discountAmount
+      : (derivedTotals.discountAmount ?? income.discountAmount ?? 0);
+    // Reconcile the paid amount and re-derive the payment status. This ensures
+    // that when a part-payment is updated and the outstanding balance reaches
+    // zero, the record is correctly marked as PAID.
+    const nextPaidAmount = Object.prototype.hasOwnProperty.call(changes, 'paidAmount')
+      ? changes.paidAmount
+      : (derivedTotals.paidAmount ?? income.paidAmount ?? 0);
+    const nextPaymentStatus = this.incomeService.deriveOverallPaymentStatus({
+      totalCost: nextAmount,
+      totalTax: nextTaxAmount,
+      totalPaid: nextPaidAmount,
+      totalDiscount: nextDiscountAmount,
+    });
     const nextNetAmount = (nextAmount || 0) - (nextTaxAmount || 0) - (nextDiscountAmount || 0);
 
     const appliedChanges = {
       ...changes,
       amount: nextAmount,
+      taxAmount: nextTaxAmount,
+      discountAmount: nextDiscountAmount,
+      paidAmount: nextPaidAmount,
+      paymentStatus: nextPaymentStatus,
       serviceDescription: derivedTotals.serviceDescription,
       serviceType: derivedTotals.serviceType,
       quantity: derivedTotals.quantity,
@@ -842,12 +862,23 @@ export class IncomeController {
       return res.status(404).json({ success: false, message: 'Income record not found' });
     }
 
-    // Calculate current total
+    // Calculate current total.
+    // For multi-item records the top-level `amount` equals the sum of the item
+    // amounts, so adding `income.amount` on top of the item sum double-counts.
+    // For single-line records the items array is empty and we fall back to the
+    // top-level amount/tax fields.
     const incomeItems = Array.isArray(income.incomeItems) ? income.incomeItems : [];
-    const totalCost = incomeItems.reduce((sum, item) => sum + (Number(item.amount) || Number(item.cost) || 0), 0);
-    const totalTax = incomeItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0), 0);
-    const totalDue = totalCost + totalTax + (Number(income.amount) || 0);
-    const existingPaid = income.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + (Number(income.paidAmount) || 0);
+    const totalCost = incomeItems.length
+      ? incomeItems.reduce((sum, item) => sum + (Number(item.amount) || Number(item.cost) || 0), 0)
+      : (Number(income.amount) || 0);
+    const totalTax = incomeItems.length
+      ? incomeItems.reduce((sum, item) => sum + (Number(item.taxAmount) || 0), 0)
+      : (Number(income.taxAmount) || 0);
+    const totalDue = totalCost + totalTax;
+    // `paidAmount` is the authoritative running total of all payments on this
+    // record (initial part-payment + every subsequently recorded payment).
+    // Summing `income.payments` on top of it would double-count.
+    const existingPaid = Number(income.paidAmount) || 0;
     const balanceBefore = Math.max(0, totalDue - existingPaid);
 
     if (paymentAmount > balanceBefore + 0.01) {
@@ -904,7 +935,7 @@ export class IncomeController {
     if (income.invoiceId) {
       const inv = await prisma.invoice.findUnique({ where: { id: income.invoiceId }, select: { totalAmount: true } });
       if (inv) {
-        const totalInvoicePaid = updatedIncome.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0) + (Number(income.paidAmount) || 0);
+        const totalInvoicePaid = newTotalPaid;
         await prisma.invoice.update({
           where: { id: income.invoiceId },
           data: {
