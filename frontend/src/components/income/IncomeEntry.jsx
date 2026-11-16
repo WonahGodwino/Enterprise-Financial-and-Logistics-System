@@ -109,6 +109,7 @@ const IncomeEntry = () => {
   const [paymentError, setPaymentError] = useState('');
   const [incomeSearch, setIncomeSearch] = useState('');
   const [incomeStatusFilter, setIncomeStatusFilter] = useState('all');
+  const [customerSearch, setCustomerSearch] = useState('');
 
   const canRecordPayment = CAN_RECORD_PAYMENT_ROLES.has(String(user?.role || '').toUpperCase());
 
@@ -145,6 +146,11 @@ const IncomeEntry = () => {
     return String(a?.name || '').localeCompare(String(b?.name || ''));
   }), [subsidiaries]);
   const vehicleOptions = useMemo(() => vehicles, [vehicles]);
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter((c) => [c.companyName, c.firstName, c.lastName, `${c.firstName || ''} ${c.lastName || ''}`.trim(), c.email, c.phone].filter(Boolean).join(' ').toLowerCase().includes(q));
+  }, [customers, customerSearch]);
   const requiresVehicleSelection = CAR_RELATED_INCOME_CATEGORIES.has(formData.category);
 
   const getPreferredSubsidiaryId = useCallback((availableSubsidiaries = []) => {
@@ -205,6 +211,7 @@ const IncomeEntry = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'subsidiaryId') setCustomerSearch('');
     setFormData((prev) => ({ ...prev, [name]: value, ...(name === 'subsidiaryId' ? { vehicleId: '', customerId: '' } : {}), ...(name === 'category' && !CAR_RELATED_INCOME_CATEGORIES.has(value) ? { vehicleId: '' } : {}) }));
   };
   const handleStagingChange = (e) => { const { name, value } = e.target; setStagingItem((p) => ({ ...p, [name]: value })); };
@@ -354,7 +361,7 @@ const IncomeEntry = () => {
           <label className="text-sm"><span className="mb-1 block text-gray-700">Income Type</span><select name="incomeType" value={formData.incomeType} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-3 py-2">{INCOME_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}</select></label>
           <label className="text-sm"><span className="mb-1 block text-gray-700">Income Category</span><select name="category" value={formData.category} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-3 py-2">{INCOME_CATEGORY_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}</select></label>
           <label className="text-sm"><span className="mb-1 block text-gray-700">Income Subsidiary</span><select name="subsidiaryId" value={formData.subsidiaryId} onChange={handleChange} className="w-full rounded-lg border border-gray-300 px-3 py-2" required><option value="">Select subsidiary</option>{subsidiaryOptions.map((s) => <option key={s.id} value={s.id}>{String(s.code || '').toUpperCase() === MAIN_SUBSIDIARY_CODE ? `${s.name} (Main)` : `${s.name}${s.code ? ` (${s.code})` : ''}`}</option>)}</select></label>
-          <label className="text-sm"><span className="mb-1 block text-gray-700">Income Source (Customer)</span><select name="customerId" value={formData.customerId} onChange={handleChange} required={!requiresVehicleSelection} disabled={!formData.subsidiaryId} className="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100"><option value="">{formData.subsidiaryId ? 'Select customer' : 'Select subsidiary first'}</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.companyName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.email || c.id}</option>)}</select></label>
+          <div className="text-sm"><span className="mb-1 block text-gray-700">Income Source (Customer)</span><input type="text" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Search customer by name..." disabled={!formData.subsidiaryId} className="mb-2 w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100" /><select name="customerId" value={formData.customerId} onChange={handleChange} required={!requiresVehicleSelection} disabled={!formData.subsidiaryId} className="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100"><option value="">{formData.subsidiaryId ? 'Select customer' : 'Select subsidiary first'}</option>{filteredCustomers.map((c) => <option key={c.id} value={c.id}>{c.companyName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.email || c.id}</option>)}</select></div>
           {requiresVehicleSelection && (<label className="text-sm"><span className="mb-1 block text-gray-700">Vehicle</span><select name="vehicleId" value={formData.vehicleId} onChange={handleChange} disabled={!formData.subsidiaryId || vehicleLoading} className="w-full rounded-lg border border-gray-300 px-3 py-2 disabled:bg-gray-100" required><option value="">{!formData.subsidiaryId ? 'Select subsidiary first' : vehicleLoading ? 'Loading...' : 'Select vehicle'}</option>{vehicleOptions.map((v) => <option key={v.id} value={v.id}>{v.registrationNumber} {v.model ? `- ${v.model}` : ''}</option>)}</select></label>)}
           <label className="text-sm"><span className="mb-1 block text-gray-700">Income Date</span><input name="incomeDate" type="date" required value={formData.incomeDate} onChange={handleChange} max={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-gray-300 px-3 py-2" /></label>
           <div className="md:col-span-2 rounded-lg border border-red-100 bg-red-50 p-4">
